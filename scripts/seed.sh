@@ -1,5 +1,3 @@
-#!/bin/bash
-# Demo data insert karo — testing ke liye
 
 set -e
 
@@ -11,7 +9,6 @@ API_URL="${API_URL:-http://localhost:3000}"
 
 echo -e "${YELLOW}🌱 Seeding demo data...${NC}"
 
-# ── User 1: Alice ────────────────────────────────
 echo -e "\n→  Creating user: alice"
 ALICE=$(curl -s -X POST "$API_URL/api/auth/signup" \
   -H "Content-Type: application/json" \
@@ -20,7 +17,6 @@ ALICE=$(curl -s -X POST "$API_URL/api/auth/signup" \
 ALICE_TOKEN=$(echo $ALICE | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
 echo -e "${GREEN}✓  Alice created${NC}"
 
-# ── User 2: Bob ──────────────────────────────────
 echo -e "→  Creating user: bob"
 BOB=$(curl -s -X POST "$API_URL/api/auth/signup" \
   -H "Content-Type: application/json" \
@@ -29,7 +25,6 @@ BOB=$(curl -s -X POST "$API_URL/api/auth/signup" \
 BOB_TOKEN=$(echo $BOB | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
 echo -e "${GREEN}✓  Bob created${NC}"
 
-# ── Room create karo ─────────────────────────────
 echo -e "→  Creating demo room..."
 ROOM=$(curl -s -X POST "$API_URL/api/rooms/create" \
   -H "Content-Type: application/json" \
@@ -39,7 +34,6 @@ ROOM=$(curl -s -X POST "$API_URL/api/rooms/create" \
 ROOM_CODE=$(echo $ROOM | grep -o '"code":"[^"]*"' | cut -d'"' -f4)
 echo -e "${GREEN}✓  Room created — code: $ROOM_CODE${NC}"
 
-# ── Bob room join kare ───────────────────────────
 echo -e "→  Bob joining room..."
 curl -s -X POST "$API_URL/api/rooms/join" \
   -H "Content-Type: application/json" \

@@ -12,7 +12,7 @@ export const signup = async ({ username, email, password }) => {
   console.log('existingUser check done')
   
   if (existingUser) {
-    throw new Error("Email ya username pehle se exist karta hai")
+    throw new Error("Email or username already exists")
   }
 
 
@@ -24,7 +24,7 @@ export const signup = async ({ username, email, password }) => {
    console.log('token generated')
    
   await saveSession(user._id.toString(), token)
-   console.log('Session saved OK')
+   console.log('Session saved successfully')
 
   return {
     token,

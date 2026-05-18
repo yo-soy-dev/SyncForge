@@ -30,7 +30,6 @@ export const getOrCreateDoc = async (roomId) => {
 
   docs.set(roomId, ydoc)
 
-  // debounce persistence
   ydoc.on("update", () => {
     clearTimeout(persistTimers.get(roomId))
 
@@ -70,7 +69,6 @@ export const removeDoc = async (roomId) => {
   const ydoc = docs.get(roomId)
 
   if (ydoc) {
-    // final persist
     await persistDoc(roomId, ydoc)
 
     ydoc.destroy()

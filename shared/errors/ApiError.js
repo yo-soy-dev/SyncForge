@@ -1,20 +1,15 @@
-// Custom error class — normal Error se better
-// Kyunki: HTTP status code bhi saath mein rakho
-
 export class ApiError extends Error {
   constructor(statusCode, message, errors = []) {
     super(message)
     this.statusCode = statusCode
-    this.errors = errors       // Multiple errors ek saath
+    this.errors = errors       
     this.success = false
     this.name = "ApiError"
 
-    // Stack trace sahi se capture ho
     Error.captureStackTrace(this, this.constructor)
   }
 }
 
-// Common errors — bar bar likhne ki zaroorat nahi
 export class NotFoundError extends ApiError {
   constructor(message = "Resource nahi mila") {
     super(404, message)

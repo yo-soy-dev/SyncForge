@@ -18,7 +18,7 @@ export const rateLimiter = async (req, res, next) => {
       const ttl = await redisClient.ttl(key) 
       return res.status(429).json({
         success: false,
-        message: "Bahut zyada requests! Thoda ruko.",
+        message: "Too many requests! Please wait a moment.",
         retryAfter: `${Math.ceil(ttl / 60)} minutes`
       })
     }

@@ -21,6 +21,7 @@ app.get("/health", (req, res) => {
 app.use(rateLimiter)
 app.use(authenticate)
 setupRoutes(app)
+// setupRoutes(app, authenticate)
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: "Route not found" })

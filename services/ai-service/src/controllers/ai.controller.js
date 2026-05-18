@@ -7,14 +7,14 @@ export const reviewCode = async (req, res) => {
     if (!code || code.trim().length === 0) {
       return res.status(400).json({
         success: false,
-        message: "Code do pehle!"
+        message: "Please provide the code first!"
       })
     }
 
     if (code.length > 10000) {
       return res.status(400).json({
         success: false,
-        message: "Code bahut lamba hai — 10000 characters se kam rakho"
+        message: "Code is too long — keep it under 10000 characters"
       })
     }
 
@@ -32,7 +32,7 @@ export const reviewCode = async (req, res) => {
     console.error("Review error:", error.message)
     res.status(500).json({
       success: false,
-      message: "AI review fail ho gaya — baad mein try karo"
+      message: "AI review failed — please try again later"
     })
   }
 }
@@ -44,7 +44,7 @@ export const chatWithAI = async (req, res) => {
     if (!message || message.trim().length === 0) {
       return res.status(400).json({
         success: false,
-        message: "Message do!"
+        message: "Please enter a message!"
       })
     }
 
@@ -59,7 +59,7 @@ export const chatWithAI = async (req, res) => {
     console.error("Chat error:", error.message)
     res.status(500).json({
       success: false,
-      message: "AI chat fail ho gaya"
+      message: "AI chat failed"
     })
   }
 }
@@ -71,7 +71,7 @@ export const fixCode = async (req, res) => {
     if (!code || code.trim().length === 0) {
       return res.status(400).json({
         success: false,
-        message: "Code do pehle!"
+        message: "Please provide the code first!"
       })
     }
 
@@ -86,7 +86,7 @@ export const fixCode = async (req, res) => {
     console.error("Fix error:", error.message)
     res.status(500).json({
       success: false,
-      message: "AI fix fail ho gaya"
+      message: "AI code fix failed"
     })
   }
 }
@@ -99,7 +99,7 @@ export const explainCode = async (req, res) => {
     if (!code || code.trim().length === 0) {
       return res.status(400).json({
         success: false,
-        message: "Code do pehle!"
+        message: "Please provide the code first!"
       })
     }
 
@@ -115,7 +115,7 @@ export const explainCode = async (req, res) => {
     console.error("Explain error:", error.message)
     res.status(500).json({
       success: false,
-      message: "AI explain fail ho gaya"
+      message: "AI explanation failed"
     })
   }
 }

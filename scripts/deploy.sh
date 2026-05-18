@@ -1,5 +1,3 @@
-#!/bin/bash
-# AWS EC2 pe deploy karne ke liye
 
 set -e
 
@@ -8,15 +6,13 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-# ── Config — apni values daal ───────────────────
 EC2_USER="ubuntu"
-EC2_HOST="${EC2_HOST:-""}"          # ya seedha: "1.2.3.4"
+EC2_HOST="${EC2_HOST:-""}"          
 EC2_KEY="${EC2_KEY:-"~/.ssh/collab-key.pem"}"
 REMOTE_DIR="/home/ubuntu/realtime-collab"
 
 echo -e "${YELLOW}🚀 Deploying to AWS EC2...${NC}"
 
-# ── EC2 host check ───────────────────────────────
 if [ -z "$EC2_HOST" ]; then
   echo -e "${RED}✗  EC2_HOST set nahi hai${NC}"
   echo "   Export karo: export EC2_HOST=your-ec2-ip"
@@ -25,7 +21,6 @@ fi
 
 echo -e "${GREEN}→  Target: $EC2_USER@$EC2_HOST${NC}"
 
-# ── Step 1: Code push karo ───────────────────────
 echo -e "\n${YELLOW}[1/4] Code copy kar raha hu EC2 pe...${NC}"
 rsync -avz \
   --exclude 'node_modules' \
@@ -37,7 +32,6 @@ rsync -avz \
 
 echo -e "${GREEN}✓  Code pushed!${NC}"
 
-# ── Step 2: .env push karo ───────────────────────
 echo -e "\n${YELLOW}[2/4] Environment variables push kar raha hu...${NC}"
 scp -i "$EC2_KEY" \
   -o StrictHostKeyChecking=no \
@@ -46,7 +40,6 @@ scp -i "$EC2_KEY" \
 
 echo -e "${GREEN}✓  .env pushed!${NC}"
 
-# ── Step 3: EC2 pe commands chalao ───────────────
 echo -e "\n${YELLOW}[3/4] EC2 pe deploy kar raha hu...${NC}"
 ssh -i "$EC2_KEY" \
   -o StrictHostKeyChecking=no \
@@ -66,9 +59,8 @@ ENDSSH
 
 echo -e "${GREEN}✓  EC2 deploy done!${NC}"
 
-# ── Step 4: Health check ─────────────────────────
 echo -e "\n${YELLOW}[4/4] Health check...${NC}"
-sleep 10  # Services start hone do
+sleep 10 
 
 STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
   "http://$EC2_HOST/nginx-health" || echo "000")

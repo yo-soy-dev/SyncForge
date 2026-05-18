@@ -1,0 +1,118 @@
+import { execFile } from "child_process"
+import { writeFile, unlink, mkdir } from "fs/promises"
+import { tmpdir } from "os"
+import { join } from "path"
+import { randomUUID } from "crypto"
+
+const TIMEOUT_MS  = 5000  
+const MAX_BUFFER  = 1024 * 512 
+
+const execute = (command, args, options = {}) => {
+  return new Promise((resolve) => {
+    const start = Date.now()
+
+    execFile(command, args, {
+      timeout:   TIMEOUT_MS,
+      maxBuffer: MAX_BUFFER,
+      ...options,
+    }, (error, stdout, stderr) => {
+      resolve({
+        stdout: stdout || "",
+        stderr: error?.killed
+          ? `⏱ Timeout — ${TIMEOUT_MS / 1000}s se zyada laga`
+          : (stderr || ""),
+        executionTime: Date.now() - start,
+      })
+    })
+  })
+}
+
+const withTempFile = async (ext, code, fn) => {
+  const file = join(tmpdir(), `${randomUUID()}.${ext}`)
+  await writeFile(file, code, "utf8")
+  try {
+    return await fn(file)
+  } finally {
+    await unlink(file).catch(() => {}) 
+  }
+}
+
+const executors = {
+
+  javascript: (code) =>
+    withTempFile("js", code, (file) =>
+      execute("node", [file])
+    ),
+
+  typescript: (code) =>
+    withTempFile("ts", code, (file) =>
+      execute("npx", ["ts-node", "--transpile-only", file])
+    ),
+
+  python: (code) =>
+    withTempFile("py", code, (file) =>
+      execute("python3", [file])
+    ),
+
+  java: async (code) => {
+    const classMatch = code.match(/public\s+class\s+(\w+)/)
+    const className  = classMatch ? classMatch[1] : "Main"
+
+    const finalCode = classMatch
+      ? code
+      : `public class Main {\n${code}\n}`
+
+    const dir  = join(tmpdir(), randomUUID())
+    const file = join(dir, `${className}.java`)
+
+    await mkdir(dir, { recursive: true })
+    await writeFile(file, finalCode, "utf8")
+
+    try {
+      const compile = await execute("javac", [file], { cwd: dir })
+      if (compile.stderr) return compile 
+
+      return await execute("java", ["-cp", dir, className], { cwd: dir })
+    } finally {
+      const { rm } = await import("fs/promises")
+      await rm(dir, { recursive: true, force: true }).catch(() => {})
+    }
+  },
+
+  cpp: async (code) => {
+    const id      = randomUUID()
+    const srcFile = join(tmpdir(), `${id}.cpp`)
+    const outFile = join(tmpdir(), `${id}.out`)
+
+    await writeFile(srcFile, code, "utf8")
+
+    try {
+      const compile = await execute("g++", ["-o", outFile, srcFile])
+      if (compile.stderr && !compile.stdout) return compile  
+
+      return await execute(outFile, [])
+    } finally {
+      await unlink(srcFile).catch(() => {})
+      await unlink(outFile).catch(() => {})
+    }
+  },
+
+  go: (code) =>
+    withTempFile("go", code, (file) =>
+      execute("go", ["run", file])
+    ),
+}
+
+export const runCode = async (code, language) => {
+  const executor = executors[language]
+
+  if (!executor) {
+    return {
+      stdout: "",
+      stderr: `❌ "${language}" support nahi hai abhi\nSupported: ${Object.keys(executors).join(", ")}`,
+      executionTime: 0,
+    }
+  }
+
+  return executor(code)
+}

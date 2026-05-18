@@ -6,20 +6,31 @@ import { Home } from "./pages/Home"
 import { Room } from "./pages/Room"
 import { NotFound } from "./pages/NotFound"
 import { Loader } from "./components/Loader"
+import { Toaster } from "sonner"
 
-// Protected route — login nahi hai toh /login pe bhejo
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth()
-  if (loading) return <Loader />
-  if (!user) return <Navigate to="/login" replace />
+  if (loading) {
+    return <Loader />
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+
   return children
 }
 
-// Public route — already logged in hai toh / pe bhejo
 const PublicRoute = ({ children }) => {
   const { user, loading } = useAuth()
-  if (loading) return <Loader />
-  if (user) return <Navigate to="/" replace />
+  if (loading) {
+    return <Loader />
+  }
+
+  if (user) {
+    return <Navigate to="/" replace />
+  }
+
   return children
 }
 
@@ -45,6 +56,21 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <Toaster
+          position="top-right"
+          richColors
+          closeButton
+          theme="dark"
+          expand
+          visibleToasts={4}
+          toastOptions={{
+            style: {
+              background: "#111827",
+              border: "1px solid #374151",
+              color: "#fff",
+            },
+          }}
+        />
         <AppRoutes />
       </AuthProvider>
     </BrowserRouter>

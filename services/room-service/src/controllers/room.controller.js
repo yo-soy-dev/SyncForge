@@ -73,7 +73,6 @@ export const deleteRoom = async (req, res) => {
 }
 
 
-// Yeh function add karo existing functions ke baad
 
 export const getRoomByCode = async (req, res) => {
   try {

@@ -4,27 +4,26 @@ const mistral = new Mistral({
   apiKey: process.env.MISTRAL_API_KEY
 })
 
-const MODEL = "mistral-small-latest"  // Free tier mein available
+const MODEL = "mistral-small-latest"
 
-// ── Code Review ──────────────────────────────────
 export const reviewCode = async (code, language) => {
   const response = await mistral.chat.complete({
     model: MODEL,
     messages: [
       {
         role: "system",
-        content: `Tu ek expert ${language} developer hai. 
-        Code review karne ke liye:
-        1. Bugs dhundho
-        2. Performance issues batao
-        3. Best practices suggest karo
-        4. Security issues batao
-        Response Hindi + English mein do. 
-        Format: emoji ke saath points mein.`
+        content: `You are an expert ${language} developer.
+        For code review:
+        1. Find bugs
+        2. Identify performance issues
+        3. Suggest best practices
+        4. Highlight security issues
+        Respond in English.
+        Format the response using emojis and bullet points.`
       },
       {
         role: "user",
-        content: `Is ${language} code ko review karo:\n\n\`\`\`${language}\n${code}\n\`\`\``
+        content: `Review this ${language} code:\n\n\`\`\`${language}\n${code}\n\`\`\``
       }
     ],
     maxTokens: 1000
@@ -33,21 +32,20 @@ export const reviewCode = async (code, language) => {
   return response.choices[0].message.content
 }
 
-// ── AI Chat ──────────────────────────────────────
 export const chatWithAI = async (message, code, language) => {
   const response = await mistral.chat.complete({
     model: MODEL,
     messages: [
       {
         role: "system",
-        content: `Tu ek helpful coding assistant hai.
-        User ke paas ${language} code hai.
-        Sawal ka jawab do — clear aur concise.
-        Code examples do jab zaruri ho.`
+        content: `You are a helpful coding assistant.
+        The user is working with ${language} code.
+        Answer the question clearly and concisely.
+        Provide code examples whenever necessary.`
       },
       {
         role: "user",
-        content: `Mera current code:\n\`\`\`${language}\n${code}\n\`\`\`\n\nSawal: ${message}`
+        content: `My current code:\n\`\`\`${language}\n${code}\n\`\`\`\n\nQuestion: ${message}`
       }
     ],
     maxTokens: 800
@@ -56,25 +54,24 @@ export const chatWithAI = async (message, code, language) => {
   return response.choices[0].message.content
 }
 
-// ── Code Fix ─────────────────────────────────────
 export const fixCode = async (code, language, error = "") => {
   const response = await mistral.chat.complete({
     model: MODEL,
     messages: [
       {
         role: "system",
-        content: `Tu ek expert ${language} developer hai.
-        Buggy code fix karo.
-        Sirf fixed code return karo — explanation nahi.
-        Code block mein wrap karo.`
+        content: `You are an expert ${language} developer.
+        Fix the buggy code.
+        Return only the fixed code — no explanation.
+        Wrap the response inside a code block.`
       },
       {
         role: "user",
-        content: `Is ${language} code ko fix karo:
+        content: `Fix this ${language} code:
 \`\`\`${language}
 ${code}
 \`\`\`
-${error ? `Error: ${error}` : "Bugs dhundho aur fix karo."}`
+${error ? `Error: ${error}` : "Find and fix the bugs."}`
       }
     ],
     maxTokens: 1000
@@ -84,25 +81,24 @@ ${error ? `Error: ${error}` : "Bugs dhundho aur fix karo."}`
 }
 
 
-// ── Code Explain ────────────────────────────────
 export const explainCode = async (code, language) => {
   const response = await mistral.chat.complete({
     model: MODEL,
     messages: [
       {
         role: "system",
-        content: `Tu ek senior ${language} teacher hai.
-        Code ko step-by-step explain karo.
-        Simple Hindi + English use karo.
-        Focus:
-        1. Code kya kar raha hai
-        2. Flow kaise kaam karta hai
+        content: `You are a senior ${language} instructor.
+        Explain the code step by step.
+        Use simple and beginner-friendly English.
+        Focus on:
+        1. What the code does
+        2. How the flow works
         3. Important logic points
         4. Beginner-friendly explanation`
       },
       {
         role: "user",
-        content: `Is code ko explain karo:\n\n\`\`\`${language}\n${code}\n\`\`\``
+        content: `Explain this code:\n\n\`\`\`${language}\n${code}\n\`\`\``
       }
     ],
     maxTokens: 900

@@ -34,7 +34,7 @@ export const logout = async (req, res) => {
 export const verifyToken = async (req, res) => {
   try {
     const token = req.headers.authorization?.split(" ")[1]
-    if (!token) throw new Error("Token nahi mila")
+    if (!token) throw new Error("Token not found")
     const decoded = await authService.verifyToken(token)
     res.status(200).json({ success: true, user: decoded })
   } catch (error) {

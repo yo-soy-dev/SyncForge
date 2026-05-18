@@ -1,6 +1,3 @@
-// Sab services mein common constants
-// Magic numbers aur strings ek jagah
-
 export const HTTP_STATUS = {
   OK:                    200,
   CREATED:               201,
@@ -16,27 +13,26 @@ export const HTTP_STATUS = {
 }
 
 export const REDIS_KEYS = {
-  SESSION:    (userId) => `session:${userId}`,       // auth
-  ROOM:       (roomId) => `room:${roomId}`,           // room cache
-  ROOM_CODE:  (code)   => `room:code:${code}`,        // room by code
-  YDOC:       (roomId) => `ydoc:${roomId}`,           // yjs doc
-  RATE_LIMIT: (ip)     => `rate_limit:${ip}`,         // rate limiter
+  SESSION:    (userId) => `session:${userId}`,      
+  ROOM:       (roomId) => `room:${roomId}`,           
+  ROOM_CODE:  (code)   => `room:code:${code}`,        
+  YDOC:       (roomId) => `ydoc:${roomId}`,          
+  RATE_LIMIT: (ip)     => `rate_limit:${ip}`,         
 }
 
 export const REDIS_TTL = {
-  SESSION:    7 * 24 * 60 * 60,   // 7 din
-  ROOM:       60 * 60,            // 1 ghanta
-  YDOC:       7 * 24 * 60 * 60,   // 7 din
-  RATE_LIMIT: 15 * 60,            // 15 min
+  SESSION:    7 * 24 * 60 * 60,  
+  ROOM:       60 * 60,            
+  YDOC:       7 * 24 * 60 * 60,   
+  RATE_LIMIT: 15 * 60,            
 }
 
 export const SOCKET_EVENTS = {
-  // Client → Server
+  
   JOIN_ROOM:        "join-room",
   YJS_UPDATE:       "yjs-update",
   AWARENESS_UPDATE: "awareness-update",
 
-  // Server → Client
   YJS_SYNC:         "yjs-sync",
   USER_LEFT:        "user-left",
   ERROR:            "error",

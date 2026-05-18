@@ -1,16 +1,12 @@
-// Ye script MongoDB pehli baar start hone pe chalta hai
-// docker-entrypoint-initdb.d/ folder mein rakha hai
 
 print("MongoDB initialization starting...")
 
 db = db.getSiblingDB("realtime-collab")
 
-// ─── Collections ────────────────────────────────
 db.createCollection("users")
 db.createCollection("rooms")
-db.createCollection("sessions") // Future use
+db.createCollection("sessions") 
 
-// ─── Users indexes ──────────────────────────────
 db.users.createIndex(
   { email: 1 },
   { unique: true, name: "email_unique" }
@@ -26,7 +22,6 @@ db.users.createIndex(
   { name: "created_at" }
 )
 
-// ─── Rooms indexes ──────────────────────────────
 db.rooms.createIndex(
   { code: 1 },
   { unique: true, name: "room_code_unique" }
@@ -47,8 +42,7 @@ db.rooms.createIndex(
   { name: "active_rooms_recent" }
 )
 
-// ─── Demo data (optional) ───────────────────────
-// Sirf development ke liye
+
 if (db.users.countDocuments() === 0) {
   print("Inserting demo user...")
   db.users.insertOne({

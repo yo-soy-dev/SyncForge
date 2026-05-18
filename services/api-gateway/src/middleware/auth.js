@@ -19,7 +19,7 @@ export const authenticate = async (req, res, next) => {
   if (!token) {
     return res.status(401).json({
       success: false,
-      message: "Login karo pehle — token nahi mila"
+      message: "Please log in first — token not found"
     })
   }
 
@@ -36,7 +36,7 @@ export const authenticate = async (req, res, next) => {
     if (!response.ok || !data.success) {
       return res.status(401).json({
         success: false,
-        message: "Invalid ya expired token"
+        message: "Invalid or expired token"
       })
     }
 
@@ -48,7 +48,7 @@ export const authenticate = async (req, res, next) => {
     console.error("Auth check failed:", error)
     res.status(503).json({
       success: false,
-      message: "Auth service unavailable"
+      message: "Authentication service unavailable"
     })
   }
 }

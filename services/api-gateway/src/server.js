@@ -12,7 +12,6 @@ const startServer = async () => {
 
     const server = http.createServer(app)
 
-    // WebSocket upgrade handle karo
     const { createProxyMiddleware } = await import("http-proxy-middleware")
     const wsProxy = createProxyMiddleware({
       target: process.env.COLLAB_SERVICE_URL,

@@ -1,5 +1,3 @@
-// console.log se better — timestamp + level + service name
-
 const levels = {
   error: "ERROR",
   warn:  "WARN ",
@@ -8,10 +6,10 @@ const levels = {
 }
 
 const colors = {
-  ERROR: "\x1b[31m",  // Red
-  WARN:  "\x1b[33m",  // Yellow
-  INFO:  "\x1b[32m",  // Green
-  DEBUG: "\x1b[36m",  // Cyan
+  ERROR: "\x1b[31m",  
+  WARN:  "\x1b[33m",  
+  INFO:  "\x1b[32m",  
+  DEBUG: "\x1b[36m",  
   RESET: "\x1b[0m"
 }
 

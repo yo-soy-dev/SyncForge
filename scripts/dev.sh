@@ -1,14 +1,12 @@
-#!/bin/bash
-# Local development ke liye
 
-set -e  # Koi bhi error aaye — script band ho jaaye
 
-# Colors for pretty output
+set -e 
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m' 
 
 echo -e "${BLUE}"
 echo "╔══════════════════════════════════════╗"
@@ -16,14 +14,12 @@ echo "║   Realtime Collab Platform — DEV     ║"
 echo "╚══════════════════════════════════════╝"
 echo -e "${NC}"
 
-# ── .env check ──────────────────────────────────
 if [ ! -f .env ]; then
   echo -e "${YELLOW}⚠  .env file nahi mili — .env.example se bana raha hu...${NC}"
   cp .env.example .env
   echo -e "${GREEN}✓  .env bana di — JWT_SECRET zaroor set karo!${NC}"
 fi
 
-# ── Docker check ────────────────────────────────
 if ! command -v docker &> /dev/null; then
   echo -e "${RED}✗  Docker nahi mila — pehle install karo${NC}"
   exit 1
@@ -34,8 +30,7 @@ if ! docker info &> /dev/null; then
   exit 1
 fi
 
-# ── Argument handling ────────────────────────────
-ACTION=${1:-"up"}  # Default: up
+ACTION=${1:-"up"}  
 
 case $ACTION in
 
@@ -74,7 +69,7 @@ case $ACTION in
     ;;
 
   "logs")
-    SERVICE=${2:-""}  # Optional: specific service
+    SERVICE=${2:-""}  
     if [ -z "$SERVICE" ]; then
       docker compose logs -f
     else
@@ -98,7 +93,7 @@ case $ACTION in
     ;;
 
   "shell")
-    # Kisi container ke andar jaao
+
     SERVICE=${2:-"auth-service"}
     echo -e "${BLUE}→  Opening shell in $SERVICE...${NC}"
     docker compose exec "$SERVICE" sh
