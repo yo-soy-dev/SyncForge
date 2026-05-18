@@ -28,7 +28,6 @@ export const Editor = ({
   return (
     <div className="relative flex flex-col md:flex-row h-full w-full overflow-hidden bg-gray-950">
 
-      {/* Mobile Users Button */}
       {!hideUserList && (
         <button
           onClick={() => setShowUsers(true)}
@@ -41,7 +40,6 @@ export const Editor = ({
         </button>
       )}
 
-      {/* Mobile Users Panel */}
       {!hideUserList && showUsers && (
         <div className="md:hidden fixed inset-0 z-40 flex">
           <div
@@ -61,7 +59,6 @@ export const Editor = ({
               </button>
             </div>
 
-            {/* Optional users list */}
             <div className="p-4 text-sm text-gray-400">
               {users.length === 0
                 ? "No active users"
@@ -75,10 +72,8 @@ export const Editor = ({
         </div>
       )}
 
-      {/* Editor Section */}
       <div className="flex-1 min-w-0 flex flex-col">
 
-        {/* Top Bar */}
         <div className="h-12 border-b border-gray-800 bg-gray-900 flex items-center justify-between px-3 sm:px-4">
           <div className="flex items-center gap-2 min-w-0">
             <div className="flex gap-1.5">
@@ -107,7 +102,6 @@ export const Editor = ({
           </div>
         </div>
 
-        {/* Editor */}
         <div className="flex-1 min-h-0">
           <MonacoEditor
             height="100%"

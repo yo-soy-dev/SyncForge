@@ -7,18 +7,15 @@ export const NotFound = () => {
   return (
     <div className="min-h-screen bg-gray-950 relative overflow-hidden flex items-center justify-center px-4 sm:px-6">
 
-      {/* Background Blobs */}
       <div className="absolute top-[-100px] left-[-100px] w-[220px] sm:w-[300px] h-[220px] sm:h-[300px] bg-amber-400/10 rounded-full blur-3xl" />
       <div className="absolute bottom-[-100px] right-[-100px] w-[220px] sm:w-[300px] h-[220px] sm:h-[300px] bg-red-500/10 rounded-full blur-3xl" />
 
       <div className="relative z-10 w-full max-w-lg text-center">
 
-        {/* Icon */}
         <div className="mx-auto mb-6 w-20 sm:w-24 h-20 sm:h-24 rounded-3xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
           <AlertTriangle size={36} className="text-red-400 sm:w-[40px] sm:h-[40px]" />
         </div>
 
-        {/* 404 Text */}
         <h1 className="text-6xl sm:text-8xl font-black tracking-tight text-white">
           4<span className="text-amber-400">0</span>4
         </h1>
@@ -31,7 +28,6 @@ export const NotFound = () => {
           The page you’re looking for doesn’t exist or may have been moved.
         </p>
 
-        {/* Buttons */}
         <div className="mt-7 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
 
           <button

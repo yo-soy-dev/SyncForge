@@ -21,7 +21,7 @@ import { toast } from "sonner"
 export const Room = () => {
   const { roomId } = useParams()
   const navigate = useNavigate()
-  const editorRef = useRef(null) // Monaco editor instance
+  const editorRef = useRef(null) 
 
   const [room, setRoom] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -29,13 +29,11 @@ export const Room = () => {
   const [currentCode, setCurrentCode] = useState("")
   const [currentFile, setCurrentFile] = useState("main")
 
-  // Panels
   const [showAI, setShowAI] = useState(false)
   const [showTerminal, setShowTerminal] = useState(false)
   const [showSidebar, setShowSidebar] = useState(true)
   const [sidebarTab, setSidebarTab] = useState("users") // "users" | "files"
 
-  // Hooks
   // const { output, running, run, clear } = useTerminal(room?.language)
   const { output, running, run, clear } = useTerminal(room?.language || "javascript")
   const { files, saving, loadFiles, saveFile, loadFile } = useFiles(roomId)
@@ -73,7 +71,6 @@ export const Room = () => {
     init()
   }, [roomId, loadFiles])
 
-  // Keyboard shortcut — Ctrl+Enter = Run
   useEffect(() => {
     const handler = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
@@ -99,7 +96,6 @@ export const Room = () => {
       toast.error("Kuch likho pehle!")
       return
     }
-    // Filename poochho agar pehli baar save kar rahe hain
     const filename = prompt(
       "File ka naam?",
       // `${currentFile}.${room?.language === "python" ? "py" : "js"}`
@@ -112,7 +108,6 @@ export const Room = () => {
 
   const handleLoadFile = useCallback((file) => {
     const content = loadFile(file)
-    // Monaco editor mein content set karo
     if (editorRef.current) {
       editorRef.current.setValue(content)
     }
@@ -145,7 +140,6 @@ export const Room = () => {
   return (
     <div className="h-screen flex flex-col bg-gray-950 overflow-hidden">
 
-      {/* Navbar — Run + Save buttons pass karo */}
       <Navbar
         showRoomControls
         onRun={handleRun}
@@ -156,7 +150,6 @@ export const Room = () => {
         onToggleAI={() => setShowAI(p => !p)}
       />
 
-      {/* Room info bar */}
       <div className="min-h-[48px] border-b border-gray-800 bg-gray-900 px-4 flex items-center gap-3">
         <span className="text-white font-semibold text-sm truncate max-w-[180px]">
           {room?.name}
@@ -169,7 +162,6 @@ export const Room = () => {
         <span className="text-xs text-amber-400 capitalize">{room?.language}</span>
 
         <div className="ml-auto flex items-center gap-2">
-          {/* Sidebar toggle */}
           <button
             onClick={() => setShowSidebar(p => !p)}
             className="text-xs text-gray-500 hover:text-gray-300 transition px-2 py-1 rounded bg-gray-800"
@@ -177,7 +169,6 @@ export const Room = () => {
             {showSidebar ? "◀ Hide" : "▶ Panel"}
           </button>
 
-          {/* Terminal toggle */}
           <button
             onClick={() => setShowTerminal(p => !p)}
             className={`text-xs px-2 py-1 rounded transition ${showTerminal
@@ -188,7 +179,6 @@ export const Room = () => {
             ⌨ Terminal
           </button>
 
-          {/* Copy code */}
           <button
             onClick={() => {
               navigator.clipboard.writeText(room?.code)
@@ -201,10 +191,8 @@ export const Room = () => {
         </div>
       </div>
 
-      {/* Main content */}
       <div className="flex-1 flex min-w-0 overflow-hidden bg-[#0b1120]">
 
-        {/* Sidebar — Users + Files */}
         <AnimatePresence initial={false}>
           {showSidebar && (
             <motion.aside
@@ -214,7 +202,6 @@ export const Room = () => {
               transition={{ type: "spring", damping: 28, stiffness: 220 }}
               className="h-full border-r border-gray-800 bg-gray-900 overflow-hidden flex flex-col shrink-0"
             >
-              {/* Tabs */}
               <div className="flex border-b border-gray-800 shrink-0">
                 {["users", "files"].map(tab => (
                   <button
@@ -230,7 +217,6 @@ export const Room = () => {
                 ))}
               </div>
 
-              {/* Tab content */}
               <div className="flex-1 overflow-y-auto">
                 <AnimatePresence mode="wait">
                   {sidebarTab === "users" ? (
@@ -264,7 +250,6 @@ export const Room = () => {
           )}
         </AnimatePresence>
 
-        {/* Center — Editor + Terminal */}
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
 
           {/* Editor */}
@@ -280,7 +265,6 @@ export const Room = () => {
             />
           </div>
 
-          {/* Terminal — slide up */}
           <Terminal
             output={output}
             running={running}
@@ -334,7 +318,6 @@ export const Room = () => {
         </AnimatePresence>
       </div>
 
-      {/* Shortcuts hint */}
       <div className="h-6 bg-gray-900 border-t border-gray-800 flex items-center px-4 gap-4">
         <span className="text-xs text-gray-700">
           Ctrl+Enter → Run

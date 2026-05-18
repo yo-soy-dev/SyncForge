@@ -12,7 +12,6 @@ export const useTerminal = (language) => {
       return
     }
 
-    // ← ANDAR hai ab — sahi jagah
     if (code.length > EXECUTION_LIMITS.MAX_CODE_SIZE) {
       setOutput([{ type: "error", text: `Code bahut lamba hai! Max ${EXECUTION_LIMITS.MAX_CODE_SIZE / 1000}KB allowed.` }])
       return

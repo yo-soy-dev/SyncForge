@@ -100,7 +100,6 @@ const sanitizeHTML = (html) => {
 const formatAIResponse = (text = "") => {
   let formatted = escapeHtml(text)
 
-  // Code Blocks
   formatted = formatted.replace(
     /```(\w+)?\n?([\s\S]*?)```/g,
     (_, lang, code) => `
@@ -116,7 +115,6 @@ const formatAIResponse = (text = "") => {
     `
   )
 
-  // Inline Code
   formatted = formatted.replace(
     /`([^`]+)`/g,
     `
@@ -126,13 +124,11 @@ const formatAIResponse = (text = "") => {
     `
   )
 
-  // Bold
   formatted = formatted.replace(
     /\*\*(.+?)\*\*/g,
     `<strong class="text-white font-semibold">$1</strong>`
   )
 
-  // Headings
   formatted = formatted.replace(
     /^### (.+)$/gm,
     `<h3 class="text-base font-bold text-white mt-4 mb-2">$1</h3>`
@@ -148,7 +144,6 @@ const formatAIResponse = (text = "") => {
     `<h1 class="text-xl font-bold text-white mt-5 mb-3">$1</h1>`
   )
 
-  // Lists
   formatted = formatted.replace(
     /^\- (.+)$/gm,
     `<li class="ml-4">$1</li>`
@@ -159,7 +154,6 @@ const formatAIResponse = (text = "") => {
     `<ul class="list-disc space-y-1 my-2">$1</ul>`
   )
 
-  // Line Breaks
   formatted = formatted.replace(/\n/g, "<br/>")
 
   return sanitizeHTML(formatted)
@@ -343,7 +337,6 @@ export const AIPanel = ({
     // <div className="flex flex-col h-full bg-gray-900 border-l border-gray-800 w-full sm:w-[460px] xl:w-[540px] ">
     <div className="flex flex-col h-full w-full bg-gray-900">
 
-      {/* Header */}
       <div className="p-4 border-b border-gray-800 shrink-0 bg-gradient-to-r from-gray-900 to-gray-950">
 
         <div className="flex items-center gap-3 mb-4">
@@ -402,7 +395,6 @@ export const AIPanel = ({
         </div>
       </div>
 
-      {/* Info */}
       <div className="px-4 py-3 bg-gray-800/40 border-b border-gray-800 shrink-0">
 
         <p className="text-xs text-gray-400 leading-relaxed">
@@ -429,10 +421,8 @@ export const AIPanel = ({
         </div>
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
 
-        {/* Chat */}
         {activeTab === "Chat" && (
           <div className="flex flex-col gap-3">
 
@@ -502,7 +492,6 @@ export const AIPanel = ({
           </div>
         )}
 
-        {/* Other Tabs */}
         {activeTab !== "Chat" && (
           <>
             {!result && !loading && (
@@ -588,7 +577,6 @@ export const AIPanel = ({
         )}
       </div>
 
-      {/* Footer */}
       <div className="p-4 border-t border-gray-800 shrink-0">
 
         {config.placeholder && (

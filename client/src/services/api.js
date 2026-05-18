@@ -8,7 +8,6 @@ const api = axios.create({
   },
 })
 
-// Token automatically attach
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token")
   if (token) {
@@ -17,7 +16,6 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// ── Auth ──────────────────────────────────────
 export const authApi = {
   signup: async (body) => {
     const res = await api.post("/api/auth/signup", body)
@@ -35,7 +33,6 @@ export const authApi = {
   },
 }
 
-// ── Rooms ──────────────────────────────────────
 export const roomApi = {
   create: async (body) => {
     const res = await api.post("/api/rooms/create", body)
@@ -61,9 +58,13 @@ export const roomApi = {
     const res = await api.delete(`/api/rooms/${roomId}`)
     return res.data
   },
+
+  leave: async (roomId) => {
+  const res = await api.post(`/api/rooms/${roomId}/leave`)
+  return res.data
+},
 }
 
-// ── AI ────────────────────────────────────────
 export const aiApi = {
   review: async (code, language) => {
     const res = await api.post("/api/ai/review", { code, language })
@@ -86,7 +87,6 @@ export const aiApi = {
   },
 }
 
-// ── Code Execution ───────────────────────────────
 export const executeApi = {
   run: async (body) => {
     const res = await api.post("/api/execute/run", body)
@@ -94,7 +94,6 @@ export const executeApi = {
   },
 }
 
-// ── Files ────────────────────────────────────────
 export const filesApi = {
   save: async (body) => {
     const res = await api.post("/api/files/save", body)

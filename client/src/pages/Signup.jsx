@@ -14,6 +14,7 @@ import {
 
 import { toast } from "sonner"
 import { useAuth } from "../context/AuthContext"
+import logo from "../assets/logo.png"
 
 export const Signup = () => {
   const [form, setForm] = useState({
@@ -56,32 +57,34 @@ export const Signup = () => {
   return (
     <div className="min-h-screen bg-gray-950 relative overflow-hidden flex items-center justify-center px-4 sm:px-6 py-10">
 
-      {/* Background blobs */}
       <div className="absolute top-[-100px] left-[-100px] w-[240px] sm:w-[300px] h-[240px] sm:h-[300px] bg-amber-400/10 rounded-full blur-3xl" />
       <div className="absolute bottom-[-100px] right-[-100px] w-[240px] sm:w-[300px] h-[240px] sm:h-[300px] bg-purple-500/10 rounded-full blur-3xl" />
 
       <div className="relative z-10 w-full max-w-md">
 
-        {/* Header */}
         <div className="text-center mb-7 sm:mb-8">
 
-          <div className="inline-flex items-center justify-center w-14 sm:w-16 h-14 sm:h-16 rounded-3xl bg-amber-400/10 border border-amber-400/20 mb-4 sm:mb-5">
+          {/* <div className="inline-flex items-center justify-center w-14 sm:w-16 h-14 sm:h-16 rounded-3xl bg-amber-400/10 border border-amber-400/20 mb-4 sm:mb-5">
             <Sparkles size={26} className="text-amber-400" />
           </div>
 
           <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
             Sync<span className="text-amber-400">Forge</span>
-          </h1>
+          </h1> */}
+
+          <img
+            src={logo}
+            alt="SyncForge"
+            className="w-20 sm:w-24 mx-auto mb-4 drop-shadow-[0_0_20px_rgba(251,191,36,0.3)]"
+          />
 
           <p className="text-gray-500 text-xs sm:text-sm mt-2 sm:mt-3">
             Build and collaborate in real time
           </p>
         </div>
 
-        {/* Card */}
         <div className="bg-gray-900/90 backdrop-blur-xl border border-gray-800 rounded-3xl p-5 sm:p-8 shadow-2xl">
 
-          {/* Title */}
           <div className="mb-6 sm:mb-8">
 
             <div className="flex items-center gap-2 mb-2 sm:mb-3">
@@ -100,7 +103,6 @@ export const Signup = () => {
             </p>
           </div>
 
-          {/* Error */}
           {error && (
             <div className="mb-5 rounded-2xl border border-red-800 bg-red-900/20 px-4 py-3 text-sm text-red-400">
               {error}
@@ -109,7 +111,6 @@ export const Signup = () => {
 
           <form onSubmit={handleSubmit} className="space-y-5">
 
-            {/* Username */}
             <div>
               <label className="block text-sm text-gray-400 mb-2">
                 Username
@@ -130,7 +131,6 @@ export const Signup = () => {
               </div>
             </div>
 
-            {/* Email */}
             <div>
               <label className="block text-sm text-gray-400 mb-2">
                 Email Address
@@ -151,7 +151,6 @@ export const Signup = () => {
               </div>
             </div>
 
-            {/* Password */}
             <div>
               <label className="block text-sm text-gray-400 mb-2">
                 Password
@@ -184,7 +183,6 @@ export const Signup = () => {
               </p>
             </div>
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
@@ -204,7 +202,6 @@ export const Signup = () => {
             </button>
           </form>
 
-          {/* Footer */}
           <p className="text-center text-sm text-gray-500 mt-6">
             Already have an account?{" "}
             <Link to="/login" className="text-amber-400 hover:text-amber-300 font-medium transition">

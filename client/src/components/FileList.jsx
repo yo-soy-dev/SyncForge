@@ -47,12 +47,10 @@ export const FileList = ({ files = [], onLoad, currentFile }) => (
               }
             `}
           >
-            {/* Icon */}
             <span className="text-lg">
               {getIcon(file.language)}
             </span>
 
-            {/* Filename */}
             <span className="truncate flex-1 min-w-0">
               {file.filename}
             </span>

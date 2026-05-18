@@ -107,32 +107,30 @@ export const Home = () => {
   }
 
   const handleDelete = async (roomId) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this room?"
-    )
-
-    if (!confirmed) return
-
+    if (!window.confirm("Delete this room permanently?")) return
     try {
       await roomApi.delete(roomId)
-
-      setRooms((prev) =>
-        prev.filter((r) => r._id !== roomId)
-      )
-
+      setRooms(prev => prev.filter(r => r._id !== roomId))
       toast.success("Room deleted")
     } catch (err) {
-      setError(err.message)
-
       toast.error(err.message)
     }
   }
 
-  if (loading) {
-    return (
-      <Loader message="Loading your rooms..." />
-    )
+  const handleLeave = async (roomId) => {
+    if (!window.confirm("Leave this room?")) return
+    try {
+      await roomApi.leave(roomId)
+      setRooms(prev => prev.filter(r => r._id !== roomId))
+      toast.success("Left the room")
+    } catch (err) {
+      toast.error(err.message)
+    }
   }
+
+  if (loading) return <Loader message="Loading your rooms..." />
+
+
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
@@ -451,7 +449,9 @@ export const Home = () => {
               <RoomCard
                 key={room._id}
                 room={room}
+                currentUserId={user?.id}
                 onDelete={handleDelete}
+                onLeave={handleLeave}
               />
             ))}
           </div>
@@ -609,7 +609,7 @@ export const Home = () => {
       )}
     </div>
   )
-}
+};
 
 
 

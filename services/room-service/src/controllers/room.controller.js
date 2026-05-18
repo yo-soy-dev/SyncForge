@@ -54,7 +54,7 @@ export const getMyRooms = async (req, res) => {
 export const getRoomById = async (req, res) => {
   // try {
     const room = await roomService.getRoomById(req.params.roomId)
-    if (!room) throw new NotFoundError("Room nahi mila")
+    if (!room) throw new NotFoundError("Room not found")
     res.status(200).json({ success: true, room })
 
   // } catch (error) {
@@ -84,3 +84,11 @@ export const getRoomByCode = async (req, res) => {
     res.status(500).json({ success: false, message: error.message })
   }
 }
+
+
+
+export const leaveRoom = asyncHandler(async (req, res) => {
+  const userId = req.headers["x-user-id"]
+  await roomService.leaveRoom(req.params.roomId, userId)
+  res.status(200).json({ success: true, message: "Room left successfully" })
+})

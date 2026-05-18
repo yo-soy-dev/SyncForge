@@ -1,4 +1,4 @@
-import mongoose from "mongoose"  
+import mongoose from "mongoose"
 import { nanoid } from "nanoid"
 import Room from "../models/Room.js"
 import redisClient from "../config/redis.js"
@@ -29,7 +29,7 @@ const toObjectId = (id) => {
 }
 
 export const createRoom = async ({ name, language, userId, username }) => {
-  const userObjectId = toObjectId(userId)  
+  const userObjectId = toObjectId(userId)
 
   const code = nanoid(8).toUpperCase()
 
@@ -37,9 +37,9 @@ export const createRoom = async ({ name, language, userId, username }) => {
     name,
     code,
     language: language || "javascript",
-    owner: userObjectId,              
+    owner: userObjectId,
     members: [{
-      userId: userObjectId,            
+      userId: userObjectId,
       username,
       joinedAt: new Date()
     }]
@@ -54,7 +54,7 @@ export const createRoom = async ({ name, language, userId, username }) => {
 }
 
 export const joinRoom = async ({ code, userId, username }) => {
-  const userObjectId = toObjectId(userId) 
+  const userObjectId = toObjectId(userId)
 
   let room = await getCached(`room:code:${code}`)
 
@@ -75,7 +75,7 @@ export const joinRoom = async ({ code, userId, username }) => {
     {
       $push: {
         members: {
-          userId: userObjectId,   
+          userId: userObjectId,
           username,
           joinedAt: new Date()
         }
@@ -92,29 +92,29 @@ export const joinRoom = async ({ code, userId, username }) => {
 }
 
 export const getMyRooms = async (userId) => {
-  const userObjectId = toObjectId(userId) 
+  const userObjectId = toObjectId(userId)
 
   const rooms = await Room.find({
     $or: [
-      { owner: userObjectId },              
-      { "members.userId": userObjectId }    
+      { owner: userObjectId },
+      { "members.userId": userObjectId }
     ],
     isActive: true
   })
-  .select("name code language members createdAt")
-  .sort({ updatedAt: -1 })
-  .lean()
+    .select("name code language members owner createdAt")
+    .sort({ updatedAt: -1 })
+    .lean()
 
   return rooms
 }
 
 export const deleteRoom = async (roomId, userId) => {
-  const userObjectId = toObjectId(userId)  
+  const userObjectId = toObjectId(userId)
 
   const room = await Room.findById(roomId)
   if (!room) throw new Error("Room nahi mila")
 
-  if (room.owner.toString() !== userObjectId.toString()) {  
+  if (room.owner.toString() !== userObjectId.toString()) {
     throw new Error("Sirf room owner delete kar sakta hai")
   }
 
@@ -148,4 +148,27 @@ export const getRoomByCode = async (code) => {
   }
 
   return room
+}
+
+
+
+
+export const leaveRoom = async (roomId, userId) => {
+  const userObjectId = toObjectId(userId)
+  const room = await Room.findById(roomId)
+  if (!room) throw new Error("Room not found")
+
+  if (room.owner.toString() === userObjectId.toString()) {
+    throw new Error("Room owner cannot leave the room. Delete the room instead.")
+  }
+
+  const updatedRoom = await Room.findByIdAndUpdate(
+    roomId,
+    { $pull: { members: { userId: userObjectId } } },
+    { new: true }
+  ).lean()
+
+  await invalidateCache(`room:${roomId}`, `room:code:${room.code}`)
+
+  return updatedRoom
 }

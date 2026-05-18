@@ -12,12 +12,10 @@ export const Loader = ({ message = "Loading..." }) => {
         px-4
       "
     >
-      {/* background glow */}
       <div className="absolute top-[-100px] left-[-100px] w-[200px] sm:w-[280px] h-[200px] sm:h-[280px] bg-amber-400/10 rounded-full blur-3xl" />
 
       <div className="absolute bottom-[-100px] right-[-100px] w-[200px] sm:w-[280px] h-[200px] sm:h-[280px] bg-orange-500/10 rounded-full blur-3xl" />
 
-      {/* loader card */}
       <div
         className="
           relative z-10
@@ -31,7 +29,6 @@ export const Loader = ({ message = "Loading..." }) => {
           w-full max-w-[300px] sm:max-w-sm
         "
       >
-        {/* spinner */}
         <div className="relative flex items-center justify-center">
           <div className="absolute w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-amber-400/10 blur-xl" />
 
@@ -43,7 +40,6 @@ export const Loader = ({ message = "Loading..." }) => {
           </div>
         </div>
 
-        {/* text */}
         <div className="text-center">
           <h2 className="text-white font-semibold text-base sm:text-lg">
             Please wait
@@ -54,7 +50,6 @@ export const Loader = ({ message = "Loading..." }) => {
           </p>
         </div>
 
-        {/* dots */}
         <div className="flex gap-1">
           <span className="w-2 h-2 rounded-full bg-amber-400 animate-bounce" />
           <span className="w-2 h-2 rounded-full bg-amber-400 animate-bounce [animation-delay:150ms]" />
