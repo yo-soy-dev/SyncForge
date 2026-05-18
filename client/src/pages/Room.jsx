@@ -1,9 +1,11 @@
 import { useParams, useNavigate } from "react-router-dom"
 import { useState, useEffect } from "react"
 import { roomApi } from "../services/api"
-import { Editor } from "../components/Editor" 
+import { Editor } from "../components/Editor"
 import { Navbar } from "../components/Navbar"
 import { Loader } from "../components/Loader"
+import { AIPanel } from "../components/AIPanel"
+
 
 export const Room = () => {
   const { roomId } = useParams()
@@ -11,6 +13,8 @@ export const Room = () => {
   const [room, setRoom] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [currentCode, setCurrentCode] = useState("")
+  const [showAI, setShowAI] = useState(true)
 
   useEffect(() => {
     const fetchRoom = async () => {
@@ -51,11 +55,34 @@ export const Room = () => {
         <span className="text-gray-500 text-xs font-mono">{room?.code}</span>
         <span className="text-gray-600 text-xs">•</span>
         <span className="text-gray-500 text-xs">{room?.language}</span>
+
+        <button
+          onClick={() => setShowAI(p => !p)}
+          className={`ml-auto text-xs px-3 py-1 rounded-lg transition ${showAI
+              ? "bg-amber-400/20 text-amber-400 border border-amber-400/30"
+              : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+            }`}
+        >
+          🤖 {showAI ? "AI Hide" : "AI Show"}
+        </button>
+
       </div>
 
       {/* Editor — full height */}
-      <div className="flex-1 overflow-hidden">
-        <Editor roomId={roomId} language={room?.language} />
+      <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 overflow-hidden">
+          <Editor roomId={roomId} language={room?.language} onCodeChange={setCurrentCode} />
+        </div>
+        {showAI && (
+          <AIPanel
+            code={currentCode}
+            language={room?.language || "javascript"}
+            onApplyFix={(fixedCode) => {
+              // Editor mein fix apply karo
+              console.log("Fix apply:", fixedCode)
+            }}
+          />
+        )}
       </div>
     </div>
   )

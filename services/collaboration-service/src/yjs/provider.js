@@ -24,13 +24,15 @@ export class RedisYjsProvider {
   onRedisMessage(message) {
     try {
       const { update, excludeSocketId } = JSON.parse(message)
-      const updateBuffer = Buffer.from(update, "base64")
+      // const updateBuffer = Buffer.from(update, "base64")
+      const updateArray = Array.from(Buffer.from(update, "base64"))
 
       if (!this.io) return
 
       this.io.to(this.roomId).except(excludeSocketId).emit(
         "yjs-update",
-        updateBuffer
+        // updateBuffer
+        updateArray
       )
     } catch (err) {
       console.error("Redis message parse error:", err)

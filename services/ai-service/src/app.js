@@ -15,7 +15,7 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "ai-service" })
 })
 
-app.use("/api/ai", aiRoutes)
+app.use("/", aiRoutes)
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: "Route not found" })

@@ -3,7 +3,7 @@ import { useEditor } from "../hooks/useEditor"
 import { UserList } from "./UserList"
 import { Loader } from "./Loader"
 
-export const Editor = ({ roomId, language = "javascript" }) => {
+export const Editor = ({ roomId, language = "javascript", onCodeChange }) => {
   const { handleMount, users } = useEditor(roomId)
 
   return (
@@ -16,6 +16,7 @@ export const Editor = ({ roomId, language = "javascript" }) => {
           language={language}
           theme="vs-dark"
           onMount={handleMount}
+          onChange={(value) => onCodeChange?.(value || "")}
           options={{
             fontSize: 14,
             minimap: { enabled: false },

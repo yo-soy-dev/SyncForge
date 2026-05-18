@@ -1,0 +1,14 @@
+﻿<script>
+const u = JSON.parse(localStorage.getItem("user"))
+const roomId = window.location.pathname.split("/")[2] || prompt("Room ID daalo (MongoDB _id):")
+const s = io("http://localhost:3000", { auth: { userId: u.id, username: u.username } })
+s.on("connect", () => {
+  console.log("Connected:", s.id)
+  s.emit("join-room", { roomId, userId: u.id, username: u.username })
+  console.log("join-room emitted!", { roomId, userId: u.id })
+})
+s.on("yjs-sync", (data) => console.log("YJS_SYNC received! size:", data.length))
+s.on("error", (e) => console.log("Error:", e))
+</script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<h1>Debug page - console dekho</h1>

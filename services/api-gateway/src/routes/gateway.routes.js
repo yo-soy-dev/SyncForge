@@ -108,6 +108,11 @@ const makeWsProxy = (target) =>
 // }
 
 export const setupRoutes = (app) => {
+
+  app.use("/socket.io",
+    makeWsProxy(process.env.COLLAB_SERVICE_URL)
+  )
+
   app.use("/api/auth",
     makeProxy(process.env.AUTH_SERVICE_URL, { "^/api/auth": "/api/auth" })
   )
@@ -120,7 +125,12 @@ export const setupRoutes = (app) => {
     makeProxy(process.env.COLLAB_SERVICE_URL, { "^/api/collab": "/api/collab" })
   )
 
-  app.use("/socket.io",
-    makeWsProxy(process.env.COLLAB_SERVICE_URL)
+  app.use("/api/ai",
+    makeProxy(process.env.AI_SERVICE_URL, { "^/api/ai": "/api/ai" })
   )
+
+
+  // app.use("/socket.io",
+  //   makeWsProxy(process.env.COLLAB_SERVICE_URL)
+  // )
 }
