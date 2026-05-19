@@ -1,7 +1,14 @@
 import redisClient from "../config/redis.js"
 
 const WINDOW_SIZE = 15 * 60      
-const MAX_REQUESTS = 100          
+const MAX_REQUESTS = 100    
+
+const LIMITS = {
+  "/api/execute": 200,   
+  "/api/ai":      50,    
+  default:        100,
+}
+     
 
 export const rateLimiter = async (req, res, next) => {
   const ip = req.ip || req.headers["x-forwarded-for"] || "unknown"

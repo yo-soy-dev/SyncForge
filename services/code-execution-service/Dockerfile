@@ -5,7 +5,7 @@ WORKDIR /app
 RUN apk add --no-cache \
     python3 \
     py3-pip \
-    openjdk17-jre \
+    openjdk17-jdk \
     g++ \
     go
 

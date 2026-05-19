@@ -44,3 +44,20 @@ export const EXECUTION_LIMITS = {
   TIMEOUT_MS:    5000,   
   MAX_CODE_SIZE: 50000,  
 }
+
+
+
+export const INPUT_PATTERNS = {
+  cpp:        /cin\s*>>/,
+  c:          /scanf\s*\(/,
+  java:       /Scanner|nextInt|nextLine|next\(\)/,
+  python:     /input\s*\(/,
+  javascript: /readline|prompt\s*\(/,
+  typescript: /readline|prompt\s*\(/,
+  go:         /fmt\.Scan/,
+}
+
+export const codeNeedsInput = (code, language) => {
+  const pattern = INPUT_PATTERNS[language]
+  return pattern ? pattern.test(code) : false
+}

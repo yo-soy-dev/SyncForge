@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 
 import { roomApi } from "../services/api"
-import { DEFAULT_FILENAME } from "../utils/constants"
+import { DEFAULT_FILENAME, codeNeedsInput  } from "../utils/constants"
 import { Editor } from "../components/Editor"
 import { Navbar } from "../components/Navbar"
 import { Loader } from "../components/Loader"
@@ -21,25 +21,28 @@ import { toast } from "sonner"
 export const Room = () => {
   const { roomId } = useParams()
   const navigate = useNavigate()
-  const editorRef = useRef(null) 
+  const editorRef = useRef(null)
 
   const [room, setRoom] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [currentCode, setCurrentCode] = useState("")
-  const [currentFile, setCurrentFile] = useState("main")
 
   const [showAI, setShowAI] = useState(false)
   const [showTerminal, setShowTerminal] = useState(false)
   const [showSidebar, setShowSidebar] = useState(true)
   const [sidebarTab, setSidebarTab] = useState("users") // "users" | "files"
 
+  const [stdin, setStdin] = useState("")
+  const [currentFile, setCurrentFile] = useState("main")
+
   // const { output, running, run, clear } = useTerminal(room?.language)
   const { output, running, run, clear } = useTerminal(room?.language || "javascript")
   const { files, saving, loadFiles, saveFile, loadFile } = useFiles(roomId)
   const { users } = useEditor(roomId)
 
-  // Room fetch
+  const needsInput = codeNeedsInput(currentCode, room?.language)
+
   useEffect(() => {
     const fetchRoom = async () => {
       try {
@@ -86,10 +89,27 @@ export const Room = () => {
     return () => window.removeEventListener("keydown", handler)
   }, [currentCode, room])
 
+  // const handleRun = useCallback(() => {
+  //   setShowTerminal(true)
+  //   run(currentCode)
+  // }, [currentCode, run])
+
   const handleRun = useCallback(() => {
+    const needsInput = codeNeedsInput(currentCode, room?.language)
+
+    if (needsInput && !stdin.trim()) {
+    setShowTerminal(true)  
+    toast.warning("⚠️ This code takes input — enter the values in stdin and then run it!")
+    return  
+  }
+
     setShowTerminal(true)
-    run(currentCode)
-  }, [currentCode, run])
+
+    run({
+      code: currentCode,
+      input: stdin,
+    })
+  }, [currentCode, stdin, run, room])
 
   const handleSave = useCallback(async () => {
     if (!currentCode.trim()) {
@@ -172,8 +192,8 @@ export const Room = () => {
           <button
             onClick={() => setShowTerminal(p => !p)}
             className={`text-xs px-2 py-1 rounded transition ${showTerminal
-                ? "bg-green-500/20 text-green-400"
-                : "bg-gray-800 text-gray-500 hover:text-gray-300"
+              ? "bg-green-500/20 text-green-400"
+              : "bg-gray-800 text-gray-500 hover:text-gray-300"
               }`}
           >
             ⌨ Terminal
@@ -208,8 +228,8 @@ export const Room = () => {
                     key={tab}
                     onClick={() => setSidebarTab(tab)}
                     className={`flex-1 py-2 text-xs font-medium capitalize transition ${sidebarTab === tab
-                        ? "text-amber-400 border-b-2 border-amber-400"
-                        : "text-gray-600 hover:text-gray-400"
+                      ? "text-amber-400 border-b-2 border-amber-400"
+                      : "text-gray-600 hover:text-gray-400"
                       }`}
                   >
                     {tab === "users" ? `👥 Users (${users.length})` : "📁 Files"}
@@ -252,7 +272,6 @@ export const Room = () => {
 
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
 
-          {/* Editor */}
           <div className="flex-1 overflow-hidden shadow-2xl">
             <Editor
               roomId={roomId}
@@ -270,10 +289,12 @@ export const Room = () => {
             running={running}
             onClear={clear}
             isOpen={showTerminal}
+            stdin={stdin}
+            setStdin={setStdin}
+            needsInput={needsInput}
           />
         </div>
 
-        {/* AI Panel */}
         <AnimatePresence initial={false}>
           {showAI && (
             // <motion.div
