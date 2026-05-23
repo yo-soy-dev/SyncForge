@@ -18,6 +18,10 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "api-gateway" })
 })
 
+app.get("/", (req, res) => {
+  res.send("api-gateway-service server is running")
+})
+
 app.use(rateLimiter)
 app.use(authenticate)
 setupRoutes(app)

@@ -16,6 +16,10 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "collaboration-service" })
 })
 
+app.get("/", (req, res) => {
+  res.send("collaboration-service server is running")
+})
+
 export const httpServer = createServer(app)
 createSocketServer(httpServer)
 

@@ -18,6 +18,10 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "room-service" })
 })
 
+app.get("/", (req, res) => {
+  res.send("room-service server is running")
+})
+
 app.use("/", roomRoutes)
 app.use("/", fileRoutes)
 

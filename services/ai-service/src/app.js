@@ -15,6 +15,10 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "ai-service" })
 })
 
+app.get("/", (req, res) => {
+  res.send("ai-service server is running")
+})
+
 app.use("/", aiRoutes)
 
 app.use((req, res) => {
