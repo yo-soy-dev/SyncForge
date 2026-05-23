@@ -1,0 +1,222 @@
+
+version: "3.9"
+
+services:
+
+  mongodb:
+    image: mongo:7
+    container_name: collab-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+      - ./infrastructure/mongodb/init.js:/docker-entrypoint-initdb.d/init.js
+    environment:
+      MONGO_INITDB_DATABASE: realtime-collab
+    networks:
+      - collab-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: collab-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+      - ./infrastructure/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - collab-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    container_name: collab-auth
+    restart: unless-stopped
+    environment:
+      PORT: 4001
+      MONGO_URI: ${MONGO_URI}         
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      redis:                          
+        condition: service_healthy
+    networks:
+      - collab-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  room-service:
+    build:
+      context: .
+      dockerfile: services/room-service/Dockerfile
+    container_name: collab-room
+    restart: unless-stopped
+    environment:
+      PORT: 4002
+      MONGO_URI: ${MONGO_URI}        
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - collab-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4002/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  collaboration-service:
+    build:
+      context: .
+      dockerfile: services/collaboration-service/Dockerfile
+    container_name: collab-realtime
+    restart: unless-stopped
+    ports:
+      - "4003:4003"
+    environment:
+      PORT: 4003
+      REDIS_URL: redis://redis:6379
+      ROOM_SERVICE_URL: http://room-service:4002
+      CLIENT_URL: http://localhost:5173
+      SERVER_ID: collab-server-1
+    depends_on:
+      redis:
+        condition: service_healthy
+      room-service:
+        condition: service_healthy
+    networks:
+      - collab-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4003/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  ai-service:
+    build:
+      context: .
+      dockerfile: services/ai-service/Dockerfile
+    container_name: collab-ai
+    restart: unless-stopped
+    environment:
+      PORT: 4004                      
+      REDIS_URL: redis://redis:6379
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY}
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - collab-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4004/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  code-execution-service:
+    build:
+      context: .
+      dockerfile: services/code-execution-service/Dockerfile
+    container_name: collab-executor
+    restart: unless-stopped
+    environment:
+      PORT: 4005
+    networks:
+      - collab-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4005/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    container_name: collab-gateway
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      REDIS_URL: redis://redis:6379
+      AUTH_SERVICE_URL: http://auth-service:4001
+      ROOM_SERVICE_URL: http://room-service:4002
+      COLLAB_SERVICE_URL: http://collaboration-service:4003
+      AI_SERVICE_URL: http://ai-service:4004           
+      EXECUTE_SERVICE_URL: http://code-execution-service:4005  
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      room-service:
+        condition: service_healthy
+      collaboration-service:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+      code-execution-service:
+        condition: service_healthy    
+    networks:
+      - collab-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  nginx:
+    image: nginx:alpine
+    container_name: collab-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api-gateway
+      - collaboration-service
+      - client
+    networks:
+      - collab-network
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: collab-client
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:3000
+      VITE_SOCKET_URL: http://localhost:4003
+    depends_on:
+      - api-gateway
+    networks:
+      - collab-network
+
+networks:
+  collab-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
+  redis-data:
