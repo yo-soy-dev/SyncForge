@@ -7,6 +7,7 @@ export const useFiles = (roomId) => {
   const [saving, setSaving] = useState(false)
 
   const loadFiles = useCallback(async () => {
+    if (!roomId) return
     try {
       const data = await filesApi.getByRoom(roomId)
       setFiles(data.files || [])
@@ -27,14 +28,21 @@ export const useFiles = (roomId) => {
         }
         return [data.file, ...prev]
       })
-      toast.success(`${filename} saved!`)
+      toast.success(`${filename} saved successfully!`)
     } catch (err) {
-      console.warn("Save failed (file service unavailable):", err.message)
-      toast.warning("File service coming soon — code editor mein kaam karta rahega!")
+      console.error("Save error:", err)
+      toast.error("Save failed: " + (err.response?.data?.message || err.message))
     } finally {
       setSaving(false)
     }
   }, [roomId])
+
+  const loadFile = useCallback((file) => {
+    return file.content || ""
+  }, [])
+
+  return { files, saving, loadFiles, saveFile, loadFile }
+}  }, [roomId])
 
   const loadFile = useCallback((file) => {
     return file.content
