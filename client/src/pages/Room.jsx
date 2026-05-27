@@ -38,7 +38,7 @@ export const Room = () => {
 
   // const { output, running, run, clear } = useTerminal(room?.language)
   const { output, running, run, clear } = useTerminal(room?.language || "javascript")
-  const { files, saving, loadFiles, saveFile, loadFile } = useFiles(roomId)
+  const { files, saving, loadFiles, saveFile, saveToDevice, loadFile } = useFiles(roomId)
   const { users } = useEditor(roomId)
 
   const needsInput = codeNeedsInput(currentCode, room?.language)
@@ -112,19 +112,25 @@ export const Room = () => {
   }, [currentCode, stdin, run, room])
 
   const handleSave = useCallback(async () => {
-    if (!currentCode.trim()) {
-      toast.error("Kuch likho pehle!")
-      return
-    }
-    const filename = prompt(
-      "File ka naam?",
-      // `${currentFile}.${room?.language === "python" ? "py" : "js"}`
-      DEFAULT_FILENAME(room?.language)
-    )
-    if (!filename) return
-    setCurrentFile(filename)
+  if (!currentCode.trim()) {
+    toast.error("Write some code first!")
+    return
+  }
+  const filename = prompt(
+    "Enter file name:",
+    DEFAULT_FILENAME(room?.language)
+  )
+  if (!filename) return
+  setCurrentFile(filename)
+  try {
+    saveToDevice(filename, currentCode)
     await saveFile(filename, currentCode, room?.language)
-  }, [currentCode, currentFile, room, saveFile])
+
+    toast.success(`${filename} saved to device + cloud!`)
+  } catch (err) {
+    toast.warning(`${filename} downloaded but cloud save failed`)
+  }
+}, [currentCode, room, saveFile, saveToDevice])
 
   const handleLoadFile = useCallback((file) => {
     const content = loadFile(file)
