@@ -28,7 +28,7 @@ export const useFiles = (roomId) => {
         }
         return [data.file, ...prev]
       })
-      toast.success(`${filename} saved successfully!`)
+      toast.success(`${filename} saved to cloud!`)
     } catch (err) {
       console.error("Save error:", err)
       toast.error("Save failed: " + (err.response?.data?.message || err.message))
@@ -37,16 +37,35 @@ export const useFiles = (roomId) => {
     }
   }, [roomId])
 
+  
+  const saveToDevice = useCallback((filename, content) => {
+    try {
+      
+      const blob = new Blob([content], { type: "text/plain" })
+
+      
+      const url  = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href     = url
+      link.download = filename  
+
+      
+      document.body.appendChild(link)
+      link.click()
+
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      toast.success(`${filename} downloaded to your device!`)
+    } catch (err) {
+      console.error("Device save error:", err)
+      toast.error("Download failed: " + err.message)
+    }
+  }, [])
+
   const loadFile = useCallback((file) => {
     return file.content || ""
   }, [])
 
-  return { files, saving, loadFiles, saveFile, loadFile }
-}  }, [roomId])
-
-  const loadFile = useCallback((file) => {
-    return file.content
-  }, [])
-
-  return { files, saving, loadFiles, saveFile, loadFile }
+  return { files, saving, loadFiles, saveFile, saveToDevice, loadFile }
 }
