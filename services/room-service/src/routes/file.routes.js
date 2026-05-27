@@ -49,11 +49,4 @@ router.delete("/:fileId", async (req, res) => {
   }
 })
 
-export default router    await File.findByIdAndDelete(req.params.fileId)
-    res.json({ success: true })
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message })
-  }
-})
-
-export default router
+export default router;
