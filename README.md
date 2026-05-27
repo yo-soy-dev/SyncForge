@@ -103,8 +103,8 @@ Vercel (React Client)
 | auth-service | 4001 | Signup, login, JWT, Redis sessions |
 | room-service | 4002 | Room CRUD, file save/load, Redis caching |
 | collaboration-service | 4003 | Socket.IO, Yjs sync, Redis pub/sub |
-| ai-service | 4005 | AI review, fix, explain, chat |
-| code-execution-service | 4004 | Sandboxed code runner (JS, Python, TS) |
+| ai-service | 4004 | AI review, fix, explain, chat |
+| code-execution-service | 4005 | Sandboxed code runner (JS, Python, TS) |
 
 ---
 
