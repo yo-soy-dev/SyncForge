@@ -8,6 +8,9 @@ import { authenticate } from "./middleware/auth.js"
 import { setupRoutes } from "./routes/gateway.routes.js"
 
 const app = express()
+
+app.set("trust proxy", 1)
+
 app.use(helmet())
 app.use(morgan("dev"))
 app.use(cors({ origin: "*", credentials: true }))
@@ -23,7 +26,7 @@ app.get("/", (req, res) => {
 })
 
 app.use(rateLimiter)
-app.use(authenticate)
+// app.use(authenticate)
 setupRoutes(app)
 // setupRoutes(app, authenticate)
 
