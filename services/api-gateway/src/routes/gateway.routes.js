@@ -39,7 +39,7 @@ export const setupRoutes = (app) => {
   )
 
   app.use("/api/auth",
-    makeProxy(process.env.AUTH_SERVICE_URL, { "^/api/auth": "/api/auth" })
+    makeProxy(process.env.AUTH_SERVICE_URL, { "^/api/auth": "" })
   )
 
   app.use("/api/rooms",
