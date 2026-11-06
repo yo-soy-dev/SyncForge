@@ -1,6 +1,7 @@
 import express from "express"
 import cors from "cors"
 import executeRoutes from "./routes/execute.routes.js"
+import { requireInternalKey } from "../shared/middleware/internalAuth.js"
 
 const app = express()
 app.use(cors())
@@ -10,6 +11,7 @@ app.get("/health", (req, res) => res.json({ status: "ok", service: "code-executi
 app.get("/", (req, res) => {
   res.send("code-execution-service server is running")
 })
+app.use(requireInternalKey())
 app.use("/", executeRoutes)
 
 export default app

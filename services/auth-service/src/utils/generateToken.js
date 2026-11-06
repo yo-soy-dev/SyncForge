@@ -1,21 +1,17 @@
 import jwt from "jsonwebtoken"
 import redisClient from "../config/redis.js"
 
-export const generateToken = (userId) => {
+export const generateToken = (userId, username, { isGuest = false, expiresIn = "7d" } = {}) => {
   return jwt.sign(
-    { userId },
+    { userId, username, ...(isGuest ? { isGuest: true } : {}) },
     process.env.JWT_SECRET,
-    { expiresIn: "7d" }
+    { expiresIn }
   )
 }
 
-export const saveSession = async (userId, token) => {
+export const saveSession = async (userId, token, ttlSeconds = 7 * 24 * 60 * 60) => {
   try {
-    await redisClient.setEx(
-      `session:${userId}`, 
-      7 * 24 * 60 * 60,     
-      token                  
-    )
+    await redisClient.setEx(`session:${userId}`, ttlSeconds, token)
   } catch (err) {
     console.error('saveSession error:', err.message)
     throw err

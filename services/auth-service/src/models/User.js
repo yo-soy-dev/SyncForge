@@ -20,10 +20,18 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     minlength: 6
-  }
+  },
+  avatarUrl: { 
+    type: String, 
+    default: "" 
+  },
+  isGuest: { type: Boolean, default: false },
+  expiresAt: { type: Date }
 }, {
   timestamps: true 
 })
+
+userSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 })
 
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) return

@@ -1,41 +1,19 @@
 import redisClient from "../config/redis.js"
+import { makeLimiter } from "./rateLimit.core.js"
+import { requestPath } from "./auth.js"
 
-const WINDOW_SIZE = 15 * 60      
-const MAX_REQUESTS = 100    
+const clientIp = (req) => req.ip || req.socket?.remoteAddress || "unknown"
 
-const LIMITS = {
-  "/api/execute": 200,   
-  "/api/ai":      50,    
-  default:        100,
-}
-     
+// Before authentication: per IP.
+export const rateLimiter = makeLimiter({
+  redis: redisClient,
+  keyFn: (req) => `ip:${clientIp(req)}`,
+  pathFn: requestPath,
+})
 
-export const rateLimiter = async (req, res, next) => {
-  const ip = req.ip || req.headers["x-forwarded-for"] || "unknown"
-  const key = `rate_limit:${ip}`
-
-  try {
-    const current = await redisClient.incr(key)
-
-    if (current === 1) {
-      await redisClient.expire(key, WINDOW_SIZE)
-    }
-
-    if (current > MAX_REQUESTS) {
-      const ttl = await redisClient.ttl(key) 
-      return res.status(429).json({
-        success: false,
-        message: "Too many requests! Please wait a moment.",
-        retryAfter: `${Math.ceil(ttl / 60)} minutes`
-      })
-    }
-
-    res.setHeader("X-RateLimit-Limit", MAX_REQUESTS)
-    res.setHeader("X-RateLimit-Remaining", MAX_REQUESTS - current)
-
-    next()
-  } catch (error) {
-    console.error("Rate limiter error:", error)
-    next()
-  }
-}
+// After authentication: per user. Mount only after authenticate.
+export const userRateLimiter = makeLimiter({
+  redis: redisClient,
+  keyFn: (req) => `user:${req.headers["x-user-id"] || clientIp(req)}`,
+  pathFn: requestPath,
+})

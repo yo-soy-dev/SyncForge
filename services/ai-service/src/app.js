@@ -3,6 +3,7 @@ import cors from "cors"
 import helmet from "helmet"
 import morgan from "morgan"
 import aiRoutes from "./routes/ai.routes.js"
+import { requireInternalKey } from "../shared/middleware/internalAuth.js"
 
 const app = express()
 
@@ -18,6 +19,8 @@ app.get("/health", (req, res) => {
 app.get("/", (req, res) => {
   res.send("ai-service server is running")
 })
+
+app.use(requireInternalKey())
 
 app.use("/", aiRoutes)
 

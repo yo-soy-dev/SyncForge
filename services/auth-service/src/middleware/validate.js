@@ -1,5 +1,14 @@
+const isText = (v) => typeof v === "string"
+
+
+
 export const validateSignup = (req, res, next) => {
   const { username, email, password } = req.body
+
+  if (![username, email, password].every(isText)) {
+    return res.status(400).json({ success: false, message: "Invalid input" })
+  }
+
 
   const errors = []
 
@@ -24,6 +33,11 @@ export const validateSignup = (req, res, next) => {
 
 export const validateLogin = (req, res, next) => {
   const { email, password } = req.body
+
+
+    if (![email, password].every(isText)) {
+    return res.status(400).json({ success: false, message: "Invalid input" })
+  }
 
   if (!email || !password) {
     return res.status(400).json({

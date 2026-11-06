@@ -4,8 +4,8 @@ import { connectRedis } from "./config/redis.js"
 
 const PORT = process.env.PORT || 4004
 
-if (!process.env.MISTRAL_API_KEY) {
-  console.error("MISTRAL_API_KEY missing!")
+if (!process.env.GEMINI_API_KEY) {
+  console.error("GEMINI_API_KEY is missing!")
   process.exit(1)
 }
 
