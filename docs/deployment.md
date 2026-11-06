@@ -1,417 +1,147 @@
-# SyncForge — Deployment Guide
+﻿# Coduet: Deployment Guide (Docker on a VPS / EC2)
 
-## Deployment Stack
+This is the recommended way to run Coduet in production: one Linux server, Docker Compose, nginx in front. MongoDB, Redis and the TURN server run in the same stack. For a managed-hosting alternative see [deployment-render.md](deployment-render.md).
 
-| Service | Platform | Cost |
-|---|---|---|
-| Frontend (React) | Vercel | Free |
-| Backend Services | Render | Free tier |
-| Database | MongoDB Atlas | Free (512MB) |
-| Redis | Upstash | Free (10K req/day) |
+## What you need
 
----
+- A Linux server (Ubuntu 22.04+ is a good default) with at least 2 vCPU and 4 GB RAM, and a **public IP**.
+- A **domain name** pointing at the server. HTTPS is required in production: browsers only allow camera and microphone access on secure origins, and your JWT must not travel over plain HTTP.
+- Docker with Compose v2 on the server.
+- Accounts for the optional integrations: Cloudinary (avatars), Brevo (email), and API keys for Mistral, Gemini and Groq.
 
-## Prerequisites
+## 1. Open the right ports
 
-- GitHub account
-- MongoDB Atlas account — [cloud.mongodb.com](https://cloud.mongodb.com)
-- Upstash account — [upstash.com](https://upstash.com)
-- Vercel account — [vercel.com](https://vercel.com)
-- Render account — [render.com](https://render.com)
-- Mistral API key — [console.mistral.ai](https://console.mistral.ai)
+In your firewall or security group:
 
----
+| Port | Protocol | Purpose | Open to |
+|---|---|---|---|
+| 22 | TCP | SSH | Your IP only |
+| 80, 443 | TCP | Web | Anyone |
+| 3478 | UDP and TCP | TURN | Anyone |
+| 49160-49200 | UDP | TURN media relay | Anyone |
 
-## Step 1 — GitHub Setup
+Do **not** open 27017 (MongoDB), 6379 (Redis), 3001 or 4003. The compose file already binds them to `127.0.0.1`, and nothing outside needs them.
 
-```bash
-# Initialize repo
-git init
-git add .
-git commit -m "Initial commit — SyncForge"
+## 2. Prepare the environment file
 
-# Push to GitHub
-git remote add origin https://github.com/yo-soy-dev/syncforge.git
-git push -u origin main
-```
+Create `.env.production` on your machine (keep it out of git, and add `--exclude '.env.production'` to the rsync command in `scripts/deploy.sh` so it is only copied once, as `.env`). Start from `.env.example`:
 
-**Important — Make sure `.gitignore` includes:**
-```
-.env
-.env.production
-node_modules/
-dist/
-*.log
-```
-
----
-
-## Step 2 — MongoDB Atlas Setup
-
-1. Go to [cloud.mongodb.com](https://cloud.mongodb.com)
-2. **New Project** → "SyncForge"
-3. **Build a Cluster** → Free tier (M0)
-4. Region: Mumbai (ap-south-1) — for faster access in India
-5. **Database Access** → Add user → set username + password
-6. **Network Access** → Add IP → `0.0.0.0/0` (allow all)
-7. **Connect** → Drivers → Copy the connection string
-
-```
-mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/realtime-collab
-```
-
----
-
-## Step 3 — Upstash Redis Setup
-
-1. Go to [upstash.com](https://upstash.com)
-2. **Create Database** → Redis
-3. Name: syncforge-redis
-4. Region: ap-south-1 (Mumbai)
-5. Select free tier
-6. Copy the **REST URL** — it will be in this format:
-
-```
-rediss://default:password@host.upstash.io:6379
-```
-
----
-
-## Step 4 — Render Backend Deploy
-
-### 4.1 — Account Setup
-
-1. Go to [render.com](https://render.com)
-2. **Sign up with GitHub**
-
-### 4.2 — Deploy Services (in this order)
-
-**auth-service:**
-```
-New + → Web Service
-Name: syncforge-auth
-Repository: username/syncforge
-Branch: main
-Root Directory: (blank)
-Dockerfile Path: services/auth-service/Dockerfile
-Instance Type: Free
-```
-
-Environment Variables:
-```
-PORT = 4001
-MONGO_URI = <Atlas URL>
-REDIS_URL = <Upstash URL>
-JWT_SECRET = <random 32+ char string>
-NODE_ENV = production
-```
-
----
-
-**room-service:**
-```
-Name: syncforge-room
-Dockerfile: services/room-service/Dockerfile
-Instance Type: Free
-```
-
-Environment Variables:
-```
-PORT = 4002
-MONGO_URI = <Atlas URL>
-REDIS_URL = <Upstash URL>
-NODE_ENV = production
-```
-
----
-
-**ai-service:**
-```
-Name: syncforge-ai
-Dockerfile: services/ai-service/Dockerfile
-Instance Type: Free
-```
-
-Environment Variables:
-```
-PORT = 4004
-REDIS_URL = <Upstash URL>
-MISTRAL_API_KEY = <Mistral key>
-NODE_ENV = production
-```
-
----
-
-**code-execution-service:**
-```
-Name: syncforge-executor
-Dockerfile: services/code-execution-service/Dockerfile
-Instance Type: Free
-```
-
-Environment Variables:
-```
-PORT = 4005
-NODE_ENV = production
-```
-
----
-
-**collaboration-service:**
-
-> Deploy first — we will update CLIENT_URL later
-
-```
-Name: syncforge-collab
-Dockerfile: services/collaboration-service/Dockerfile
-Instance Type: Free
-```
-
-Environment Variables:
-```
-PORT = 4003
-REDIS_URL = <Upstash URL>
-ROOM_SERVICE_URL = https://syncforge-room.onrender.com
-CLIENT_URL = https://syncforge.vercel.app
-SERVER_ID = collab-server-1
-NODE_ENV = production
-```
-
----
-
-**api-gateway:**
-
-> Deploy this last
-
-```
-Name: syncforge-gateway
-Dockerfile: services/api-gateway/Dockerfile
-Instance Type: Free
-```
-
-Environment Variables:
-```
-PORT = 3000
-REDIS_URL = <Upstash URL>
-AUTH_SERVICE_URL = https://syncforge-auth.onrender.com
-ROOM_SERVICE_URL = https://syncforge-room.onrender.com
-COLLAB_SERVICE_URL = https://syncforge-collab.onrender.com
-AI_SERVICE_URL = https://syncforge-ai.onrender.com
-EXECUTE_SERVICE_URL = https://syncforge-executor.onrender.com
-NODE_ENV = production
-```
-
-### 4.3 — Note down Render URLs
-
-```
-https://syncforge-auth.onrender.com
-https://syncforge-room.onrender.com
-https://syncforge-collab.onrender.com
-https://syncforge-ai.onrender.com
-https://syncforge-executor.onrender.com
-https://syncforge-gateway.onrender.com  ← this one is important
-```
-
----
-
-## Step 5 — Vercel Frontend Deploy
-
-### 5.1 — Update Client Dockerfile
-
-`client/Dockerfile`:
-```dockerfile
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-ARG VITE_API_URL
-ARG VITE_SOCKET_URL
-ENV VITE_API_URL=$VITE_API_URL
-ENV VITE_SOCKET_URL=$VITE_SOCKET_URL
-RUN npm run build
-
-FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-```
-
-`client/nginx.conf`:
-```nginx
-server {
-    listen 80;
-    location / {
-        root /usr/share/nginx/html;
-        index index.html;
-        try_files $uri $uri/ /index.html;
-    }
-}
-```
-
-### 5.2 — Vercel Deploy
-
-1. Go to [vercel.com](https://vercel.com)
-2. **New Project** → Import GitHub repo → SyncForge
-3. Settings:
-```
-Framework Preset: Vite
-Root Directory: client
-Build Command: npm run build
-Output Directory: dist
-```
-
-4. Environment Variables:
-```
-VITE_API_URL = https://syncforge-gateway.onrender.com
-VITE_SOCKET_URL = https://syncforge-collab.onrender.com
-```
-
-5. Click **Deploy**!
-
-You will get a Vercel URL: `https://sync-forge-psi.vercel.app`
-
----
-
-## Step 6 — Final Updates
-
-### Update CLIENT_URL in the Collaboration Service
-
-Render Dashboard → syncforge-collab → Environment:
-```
-CLIENT_URL = https://sync-forge-psi.vercel.app
-```
-
-Redeploy the service.
-
----
-
-## Step 7 — Verify Deployment
-
-```bash
-# Health checks
-curl https://syncforge-gateway.onrender.com/health
-curl https://syncforge-collab.onrender.com/health
-
-# Auth test
-curl -X POST https://syncforge-gateway.onrender.com/api/auth/signup \
-  -H "Content-Type: application/json" \
-  -d '{"username":"test","email":"test@test.com","password":"test123"}'
-
-# Frontend
-open https://sync-forge-psi.vercel.app
-```
-
----
-
-## Cold Start Issue — Render Free Tier
-
-Render free tier services **sleep after 15 minutes** of inactivity. The first request can take 30–50 seconds.
-
-**Fix — `client/src/utils/wakeup.js`:**
-```javascript
-const SERVICES = [
-  `${import.meta.env.VITE_API_URL}/health`,
-  `${import.meta.env.VITE_SOCKET_URL}/health`,
-]
-
-export const wakeUpServices = async () => {
-  console.log("Waking up services...")
-  await Promise.allSettled(
-    SERVICES.map(url =>
-      fetch(url).catch(() => null)
-    )
-  )
-}
-```
-
-**Add this to `client/src/main.jsx`:**
-```javascript
-import { wakeUpServices } from "./utils/wakeup"
-wakeUpServices() // Runs in the background when the app loads
-```
-
----
-
-## Local Development
-
-```bash
-# Create .env file
-cp .env.example .env
-# Fill in the required values
-
-# Run with Docker
-docker compose up --build
-
-# Open in browser
-http://localhost:80
-```
-
----
-
-## Environment Variables Reference
-
-### Root `.env`
 ```env
-MONGO_URI=mongodb+srv://...
-JWT_SECRET=minimum-32-character-random-string
-MISTRAL_API_KEY=your-mistral-api-key
-REDIS_URL=rediss://default:password@host.upstash.io:6379
+# Secrets: generate each one separately
+# node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+JWT_SECRET=
+INTERNAL_API_KEY=
+INTERNAL_EVENTS_KEY=
+TURN_SECRET=
+
+# Databases (hex only, so they are safe inside URLs)
+REDIS_PASSWORD=
+MONGO_USER=appuser
+MONGO_PASSWORD=
+MONGO_URI=mongodb://appuser:<MONGO_PASSWORD>@mongodb:27017/realtime-collab?authSource=admin
+
+# Public URLs: use your real domain
+CLIENT_URL=https://coduet.example.com
+APP_URL=https://coduet.example.com
+
+# AI
+MISTRAL_API_KEY=
+GEMINI_API_KEY=
+GROQ_API_KEY=
+
+# Video calls: the server's PUBLIC IP, not a LAN address
+TURN_REALM=coduet.example.com
+PUBLIC_IP=203.0.113.10
+TURN_URLS=turn:203.0.113.10:3478?transport=udp,turn:203.0.113.10:3478?transport=tcp
+STUN_URLS=stun:stun.l.google.com:19302
+
+# Avatars and email
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+SMTP_USER=
+SMTP_PASS=
+MAIL_FROM="Coduet <verified-sender@example.com>"
+MAIL_ENABLED=true
 ```
 
-### Client `.env`
-```env
-VITE_API_URL=https://syncforge-gateway.onrender.com
-VITE_SOCKET_URL=https://syncforge-collab.onrender.com
+Notes:
+- The service-level `.env` files inside `services/*` are **not** used by Docker. Only the root file is.
+- `MAIL_FROM` must be a sender (or domain) you verified in Brevo. For a custom domain also set up SPF and DKIM, otherwise mail lands in spam.
+- Never use the example values from the repo in production, and never commit real keys.
+
+## 3. Deploy
+
+The script syncs the code to `/home/ubuntu/realtime-collab` on the server (excluding `.env`, `node_modules`, `dist` and `.git`), copies `.env.production` over as `.env`, then rebuilds and restarts the stack.
+
+```bash
+export EC2_HOST=203.0.113.10          # the server's IP (the SSH user comes from EC2_USER)
+export EC2_KEY=~/.ssh/my-key.pem
+./scripts/deploy.sh
 ```
 
----
+Then, on the server:
 
-## Port Reference
+```bash
+docker compose ps                 # every service should become "healthy"
+curl http://localhost/nginx-health
+docker compose logs -f room-service
+```
 
-| Service | Port |
-|---|---|
-| api-gateway | 3000 |
-| auth-service | 4001 |
-| room-service | 4002 |
-| collaboration-service | 4003 |
-| code-execution-service | 4004 |
-| ai-service | 4005 |
-| client (local) | 5173 |
-| nginx (local) | 80 |
+After a deploy that recreates containers, restart nginx so it picks up the new container addresses:
 
----
+```bash
+docker compose restart nginx
+```
+
+## 4. HTTPS
+
+nginx in this repo listens on port 80 only. Put TLS in front of it with one of these:
+
+- **Cloudflare** (or another proxy/CDN) in front of the server. Easiest, and gives you DDoS protection too.
+- **Caddy** or **certbot** on the host, terminating TLS on 443 and proxying to nginx on port 80.
+
+If TLS terminates in front of nginx, make sure it forwards WebSocket upgrades, and set `CLIENT_URL` and `APP_URL` to the `https://` address. Check that the camera works over the HTTPS URL before announcing the deployment.
+
+> TURN here runs without TLS (`--no-tls`), which is fine for WebRTC because media is already encrypted end to end. If your users sit behind very strict firewalls, consider adding TURN over TLS on port 443 later.
+
+## 5. Backups and updates
+
+**MongoDB backup** (run on the server, keep the file somewhere off the server):
+
+```bash
+docker compose exec -T mongodb sh -c 'mongodump --username "$MONGO_INITDB_ROOT_USERNAME" --password "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --db realtime-collab --archive --gzip' > backup-$(date +%F).archive.gz
+```
+
+Restore with `mongorestore --archive --gzip` using the same credentials. Redis persists to disk (`appendonly yes`); it only holds sessions, caches and live documents, so losing it logs users out but loses no accounts or rooms.
+
+**Updating:** run `./scripts/deploy.sh` again. To roll back, check out the previous commit locally and deploy again.
+
+**Resetting a development server:** `docker compose down -v` deletes the database and Redis volumes. Never do this on a server that holds real data.
+
+## 6. Security checklist
+
+- [ ] `.env` files are not in git (`git ls-files | grep "\.env"` should show only `.env.example`).
+- [ ] Every secret is a fresh random value; Redis and MongoDB have passwords.
+- [ ] Only the ports in the table above are open.
+- [ ] HTTPS works; `CLIENT_URL` and `APP_URL` use `https://`.
+- [ ] SSH uses a key and is limited to your IP.
+- [ ] The default demo user in `infrastructure/mongodb/init.js` is removed.
+- [ ] Docker and the OS receive security updates.
 
 ## Troubleshooting
 
-**Build fails — shared/ not found:**
-```
-Make sure the Dockerfile copies shared/ from root:
-COPY shared/ ./shared/
-And that the build context is the root directory (.)
-```
-
-**WebSocket not connecting:**
-```
-Check that VITE_SOCKET_URL points to the collaboration-service
-Check CORS settings in the collaboration-service
-```
-
-**Services not communicating on Render:**
-```
-Use full Render URLs — not localhost
-https://syncforge-auth.onrender.com (not http://auth-service:4001)
-```
-
-**MongoDB connection failed:**
-```
-Check Atlas Network Access — is 0.0.0.0/0 allowed?
-Check that MONGO_URI format includes the database name
-```
-
-**Cold start too slow:**
-```
-Add wakeup.js to ping services on app load
-Consider upgrading to Render paid plan ($7/month) — no sleep
-```
+| Symptom | Likely cause and fix |
+|---|---|
+| A service is `unhealthy` and its dependents never start | Read its log: `docker compose logs <service> --tail 50`. For room-service or auth-service it is usually a MongoDB or Redis connection problem |
+| `Authentication failed` from MongoDB | The `mongo-data` volume was created before auth was enabled (the `MONGO_INITDB_*` variables only apply to a fresh volume), or the password in `MONGO_URI` differs from `MONGO_PASSWORD`. On a dev machine run `docker compose down -v` and start again |
+| `NOAUTH` / `WRONGPASS` from Redis | `REDIS_PASSWORD` is missing or contains characters that break the URL. Use hex |
+| `502` right after a deploy | nginx cached old container addresses: `docker compose restart nginx` |
+| Avatar upload fails with `413` | nginx upload limit. `client_max_body_size 3m;` must be set in the `/api/auth/` location |
+| Avatar upload fails with `400` | File is not JPG/PNG/WEBP or is over 2 MB; also check the Cloudinary variables |
+| Emails don't arrive | `MAIL_FROM` is not a verified Brevo sender, wrong `SMTP_USER`/`SMTP_PASS` (use the SMTP key, not your account password), or `MAIL_ENABLED=false`. Check `docker compose logs auth-service` |
+| Video connects locally but not for others | `PUBLIC_IP` is not the server's public IP, or the TURN ports in section 1 are blocked |
+| Camera/microphone blocked | The site is not served over HTTPS |
+| AI calls fail | Missing or invalid provider keys; check `docker compose logs ai-service` |
+| `429 Too Many Requests` | Rate limit reached. See the limits in [api.md](api.md) |
+| Code runs return an error about languages | Only JavaScript, TypeScript and Python are installed and enabled |

@@ -1,228 +1,165 @@
-# SyncForge — Real-time Collaborative Code Editor
+﻿# Coduet
 
 > **Code Together. Build Smarter.**
 
-SyncForge is a production-grade real-time collaborative code editor with AI assistance, built using a microservices architecture. Multiple developers can code simultaneously in the same editor, with changes synced in real-time across all connected users.
+Coduet is a real-time collaborative coding workspace with in-browser code execution, AI assistance you stay in control of, video calls, and a structured technical-interview mode. It is built as a set of small services behind an API gateway and runs with a single `docker compose up`.
 
----
+**Live demo:** coming soon · **Frontend README:** [client/README.md](client/README.md)
 
-## Live Demo
-
-| Service | URL |
-|---|---|
-| Frontend | https://sync-forge-psi.vercel.app |
-| API Gateway | https://syncforge-gateway.onrender.com |
-| WebSocket | https://syncforge-collab.onrender.com |
-
----
+![Landing page](docs/landing.png)
 
 ## Features
 
-- **Real-time Collaboration** — Multiple users edit simultaneously using Yjs CRDT
-- **AI Code Assistant** — Review, fix, explain, and chat about your code
-- **Code Execution** — Run JavaScript, Python, TypeScript directly in the browser
-- **File Save** — Save and load code files within rooms
-- **Room Management** — Create rooms with unique codes and invite collaborators
-- **Role-based Access** — Owner can delete rooms; collaborators can leave
-- **JWT Authentication** — Secure login with Redis session management
-- **Rate Limiting** — API protection via Redis-based rate limiter
+- **Real-time collaboration:** multi-user editing with live cursors and presence, built on Yjs (CRDT), so concurrent edits merge without conflicts.
+- **Run code in the browser:** JavaScript, TypeScript and Python, with stdin support, in an isolated sandbox.
+- **AI assistant:** review, explain, fix and chat about your code.
+- **AI suggestions you control:** the AI proposes a diff, you review it, and nothing changes until you accept. A restore point is saved first, and stale suggestions are detected if the code changed underneath.
+- **Interview mode:** owner, interviewers, candidate and observer roles, single-use candidate links, editor lock, a countdown timer, private scorecards, an event timeline and an interviewer-written summary (optionally drafted by AI).
+- **Video calls:** peer-to-peer WebRTC (up to 6 people) with a TURN server for restricted networks. Video and audio are never recorded.
+- **Version history:** snapshots with one-click restore, compare view and replay.
+- **Rooms and invites:** room codes, `/join/:code` links with redirect-back after login, and per-member `editor` / `viewer` roles.
+- **Accounts:** email signup, a one-click guest demo (24 hours), profile photos (Cloudinary) and password reset by email (Brevo SMTP).
+- **Polished UI:** responsive layout with bottom-sheet panels on mobile, a custom Monaco theme and keyboard shortcuts (`Ctrl+Enter` run, `Ctrl+S` save, `Ctrl+K` command palette).
 
----
+## Tech stack
 
-## Tech Stack
-
-### Frontend
-| Technology | Purpose |
+| Layer | Technologies |
 |---|---|
-| React 18 | UI Framework |
-| Vite | Build Tool |
-| Monaco Editor | Code Editor (VS Code engine) |
-| Yjs | CRDT real-time sync |
-| Socket.IO Client | WebSocket connection |
-| Framer Motion | Animations |
-| Tailwind CSS | Styling |
-| Sonner | Toast notifications |
-
-### Backend
-| Technology | Purpose |
-|---|---|
-| Node.js + Express | Backend runtime |
-| Socket.IO | Real-time WebSocket server |
-| Yjs | CRDT document management |
-| MongoDB + Mongoose | Primary database |
-| Redis | Sessions, caching, pub/sub |
-| JWT | Authentication tokens |
-| Docker | Containerization |
-
-### Infrastructure
-| Technology | Purpose |
-|---|---|
-| Docker Compose | Local orchestration |
-| Nginx | Reverse proxy |
-| MongoDB Atlas | Cloud database |
-| Upstash Redis | Cloud Redis |
-| Vercel | Frontend deployment |
-| Render | Backend deployment |
-
----
+| Frontend | React 18, Vite, Tailwind CSS v4, Monaco Editor, Yjs + y-monaco, Socket.IO client, Framer Motion, Axios, DOMPurify, Sonner |
+| Backend | Node.js, Express, Socket.IO, Yjs, Mongoose |
+| Data | MongoDB, Redis (sessions, cache, rate limits, pub/sub, Yjs persistence) |
+| AI | Mistral, Gemini and Groq (configurable) |
+| Real-time media | WebRTC, coturn (STUN/TURN) |
+| Integrations | Cloudinary (avatars), Brevo SMTP via Nodemailer (email) |
+| Infrastructure | Docker Compose, nginx |
 
 ## Architecture
 
-```
-Browser
-   │
-   ▼
-Vercel (React Client)
-   │
-   ├──── REST API ────► Render (API Gateway :3000)
-   │                         │
-   │                    ┌────┴────┐
-   │                    │  Redis  │ Rate limiting
-   │                    └────┬────┘
-   │                         │
-   │              ┌──────────┼──────────┐
-   │              ▼          ▼          ▼
-   │         auth-service  room-service  ai-service
-   │              │          │
-   │         MongoDB Atlas  MongoDB Atlas
-   │
-   └──── WebSocket ────► Render (Collaboration Service :4003)
-                              │
-                         ┌────┴────┐
-                         │  Redis  │ Pub/Sub sync
-                         └─────────┘
+```mermaid
+flowchart LR
+  B[Browser] --> N[nginx :80]
+  N -->|/| C[client]
+  N -->|/api| G[api-gateway]
+  N -->|/socket.io| S[collaboration-service]
+  G --> A[auth-service]
+  G --> R[room-service]
+  G --> AI[ai-service]
+  G --> X["code-execution-service (isolated network)"]
+  S --> A
+  S --> R
+  AI --> R
+  A --> M[(MongoDB)]
+  R --> M
+  G & A & R & S & AI --> Re[(Redis)]
+  AI --> LLM[Mistral / Gemini / Groq]
+  A --> Ext[Cloudinary + Brevo SMTP]
+  B -. WebRTC .-> T[coturn]
 ```
 
----
+Every REST request goes through the gateway, which applies rate limits and verifies the JWT before proxying. Real-time traffic goes to the collaboration service, which verifies the same token itself. Permissions (who can edit, who can use AI) are checked on the server for every edit and AI call, never trusted from the client. See [docs/architecture.md](docs/architecture.md) for details.
 
-## Microservices
+## Services
 
 | Service | Port | Responsibility |
 |---|---|---|
-| api-gateway | 3000 | Rate limiting, auth check, request routing |
-| auth-service | 4001 | Signup, login, JWT, Redis sessions |
-| room-service | 4002 | Room CRUD, file save/load, Redis caching |
-| collaboration-service | 4003 | Socket.IO, Yjs sync, Redis pub/sub |
-| ai-service | 4005 | AI review, fix, explain, chat |
-| code-execution-service | 4004 | Sandboxed code runner (JS, Python, TS) |
+| nginx | 80 | Entry point: static client, `/api` to the gateway, `/socket.io` to the collaboration service |
+| api-gateway | 3000 | Rate limiting, authentication, request routing |
+| auth-service | 4001 | Signup, login, guest sessions, JWT, Redis sessions, avatars, password reset |
+| room-service | 4002 | Rooms, members and roles, files, snapshots, interviews, scorecards, timeline |
+| collaboration-service | 4003 | Socket.IO, Yjs sync, presence, call signaling, Redis pub/sub |
+| ai-service | 4004 | Review, fix, explain, chat, suggest, interview summary |
+| code-execution-service | 4005 | Sandboxed runner for JavaScript, TypeScript and Python |
+| coturn | 3478 | STUN/TURN for video calls |
 
----
+## Quick start
 
-## Getting Started
-
-### Prerequisites
-
-```bash
-Node.js >= 18
-Docker + Docker Compose
-MongoDB Atlas account (free)
-Upstash Redis account (free)
-```
-
-### Local Development
+**Prerequisites:** Docker with Compose v2, and Node.js 20+ only if you want to run things outside Docker.
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/yo-soy-dev/syncforge.git
-cd syncforge
+# 1. Clone
+git clone <your-repo-url> coduet
+cd coduet
 
-# 2. Set up environment variables
+# 2. Configure
 cp .env.example .env
-# Fill in your values in the .env file
+# Fill in every value. Generate secrets with:
+#   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
-# 3. Start with Docker
-docker compose up --build
+# 3. Start everything
+docker compose up -d --build
+docker compose ps        # wait until all services are "healthy"
 
-# 4. Open in browser
-http://localhost:80
+# 4. Open
+# http://localhost
 ```
 
-### Environment Variables
+Cloudinary and SMTP values are only needed for avatars and email. The app works without them (set `MAIL_ENABLED=false` to skip sending). A full variable reference is in [docs/development.md](docs/development.md).
 
-```env
-# Root .env
-MONGO_URI=mongodb+srv://...
-JWT_SECRET=your-secret-key
-MISTRAL_API_KEY=your-mistral-key
-REDIS_URL=rediss://...
-```
-
----
-
-## Project Structure
+## Project structure
 
 ```
-syncforge/
-├── client/                    # React Frontend
-│   ├── src/
-│   │   ├── components/        # UI components
-│   │   ├── pages/             # Route pages
-│   │   ├── hooks/             # Custom hooks
-│   │   ├── context/           # Auth context
-│   │   └── services/          # API calls
-│   └── Dockerfile
-│
+coduet/
+├── client/                      # React frontend (see client/README.md)
 ├── services/
-│   ├── api-gateway/           # Entry point
-│   ├── auth-service/          # Authentication
-│   ├── room-service/          # Room management
-│   ├── collaboration-service/ # Real-time sync
-│   ├── ai-service/            # AI features
-│   └── code-execution-service/# Code runner
-│
-├── shared/                    # Common utilities
-│   ├── errors/                # Custom error classes
-│   ├── middleware/            # Error handler
-│   ├── utils/                 # Logger, asyncHandler
-│   └── constants/             # Shared constants
-│
+│   ├── api-gateway/
+│   ├── auth-service/
+│   ├── room-service/
+│   ├── collaboration-service/
+│   ├── ai-service/
+│   └── code-execution-service/
+├── shared/                      # Errors, error handler, internal-key auth, logger, constants
 ├── infrastructure/
-│   ├── nginx/                 # Nginx config
-│   ├── redis/                 # Redis config
-│   └── mongodb/               # DB init script
-│
-├── scripts/                   # Dev scripts
-│   ├── dev.sh
-│   ├── deploy.sh
-│   └── seed.sh
-│
+│   ├── nginx/
+│   ├── redis/
+│   └── mongodb/
+├── scripts/                     # dev.sh, deploy.sh, seed.sh
+├── docs/
 └── docker-compose.yml
 ```
-
----
 
 ## Scripts
 
 ```bash
-# Development
-./scripts/dev.sh up                     # Start all services
-./scripts/dev.sh down                   # Stop all services
-./scripts/dev.sh logs                   # View logs
-./scripts/dev.sh restart auth-service   # Restart a single service
-
-# Seed demo data
-./scripts/seed.sh
-
-# Deploy to production
-./scripts/deploy.sh
+./scripts/dev.sh up                    # start all services
+./scripts/dev.sh down                  # stop all services
+./scripts/dev.sh logs                  # follow logs
+./scripts/dev.sh restart auth-service  # restart one service
+./scripts/seed.sh                      # create demo users and rooms (set MAIL_ENABLED=false first)
+./scripts/deploy.sh                    # deploy to an EC2 host (see docs/deployment.md)
 ```
 
----
+## Documentation
+
+| Doc | What is in it |
+|---|---|
+| [docs/architecture.md](docs/architecture.md) | Services, request and real-time flows, interview mode, data model, Redis keys, security |
+| [docs/api.md](docs/api.md) | REST endpoints and WebSocket events |
+| [docs/development.md](docs/development.md) | Local setup, environment variables, running without Docker, testing |
+| [docs/deployment.md](docs/deployment.md) | Docker on a VPS/EC2, HTTPS, TURN, backups, troubleshooting |
+| [docs/deployment-render.md](docs/deployment-render.md) | Alternative: Render + Vercel + managed MongoDB/Redis |
+
+## Security at a glance
+
+- JWT plus a Redis-backed session check on every request; logging in elsewhere invalidates the old session.
+- Per-route rate limits (execution and AI are fail-closed), with much smaller budgets for guest accounts.
+- Services trust each other through an internal API key; clients never reach internal routes.
+- Code runs as an unprivileged user in a read-only container with no capabilities, CPU/memory/process limits and no network access.
+- AI prompts treat code as data (nonce-delimited blocks), secrets in code are detected and blocked before reaching a model, and every AI edit is a diff a human accepts, with a restore point saved first.
+- Passwords are hashed with bcrypt; password-reset tokens are random, stored hashed, single-use and expire after 15 minutes.
+
+## AI quality
+
+Prompts are guarded against injection and evaluated with the harness in `services/ai-service/evals/`; results are kept in `services/ai-service/evals/results/`. Guardrails: nonce-delimited data blocks, secret redaction and blocking, refusal handling, no evaluative language in interview summaries, free-form AI disabled in interview rooms, and human-reviewed diffs with restore points for every AI edit.
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
+1. Fork the repository.
+2. Create a feature branch: `git checkout -b feature/my-feature`.
+3. Commit your changes: `git commit -m "Add my feature"`.
+4. Push the branch and open a Pull Request.
 
 ## License
 
-MIT License — free to use and modify.
+MIT. See [LICENSE](LICENSE).
 
----
-
-Made with ❤️ by Devansh Kumar Tiwari
+Made by Devansh Kumar Tiwari.
