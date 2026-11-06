@@ -1,19 +1,19 @@
-
-version: "3.9"
+name: coduet
 
 services:
-
   mongodb:
     image: mongo:7
     container_name: collab-mongodb
     restart: unless-stopped
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     volumes:
       - mongo-data:/data/db
       - ./infrastructure/mongodb/init.js:/docker-entrypoint-initdb.d/init.js
     environment:
       MONGO_INITDB_DATABASE: realtime-collab
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:?set MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?set MONGO_PASSWORD}
     networks:
       - collab-network
     healthcheck:
@@ -27,18 +27,54 @@ services:
     container_name: collab-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis-data:/data
       - ./infrastructure/redis/redis.conf:/usr/local/etc/redis/redis.conf
-    command: redis-server /usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf --requirepass ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     networks:
       - collab-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  coturn:
+    image: coturn/coturn:latest # TODO: pin a specific version
+    container_name: collab-coturn
+    restart: unless-stopped
+    ports:
+      - "3478:3478/udp"
+      - "3478:3478/tcp"
+      - "49160-49200:49160-49200/udp"
+    command:
+      - -n
+      - --log-file=stdout
+      - --listening-port=3478
+      - --min-port=49160
+      - --max-port=49200
+      - --realm=${TURN_REALM:?set TURN_REALM}
+      - --lt-cred-mech
+      - --use-auth-secret
+      - --static-auth-secret=${TURN_SECRET:?set TURN_SECRET}
+      - --external-ip=${PUBLIC_IP:?set PUBLIC_IP}
+      - --fingerprint
+      # - --no-cli
+      - --no-tls
+      # - --no-dtls
+      - --no-multicast-peers
+      - --denied-peer-ip=0.0.0.0-0.255.255.255
+      - --denied-peer-ip=10.0.0.0-10.255.255.255
+      - --denied-peer-ip=100.64.0.0-100.127.255.255
+      - --denied-peer-ip=127.0.0.0-127.255.255.255
+      - --denied-peer-ip=169.254.0.0-169.254.255.255
+      - --denied-peer-ip=172.16.0.0-172.31.255.255
+      - --denied-peer-ip=192.168.0.0-192.168.255.255
+    networks:
+      - collab-network
 
   auth-service:
     build:
@@ -47,12 +83,25 @@ services:
     container_name: collab-auth
     restart: unless-stopped
     environment:
+      NODE_ENV: production
       PORT: 4001
-      MONGO_URI: ${MONGO_URI}         
-      REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET}
+      MONGO_URI: ${MONGO_URI:?set MONGO_URI in .env}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      APP_URL: ${APP_URL:-http://localhost}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      SMTP_HOST: ${SMTP_HOST:-smtp-relay.brevo.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      MAIL_ENABLED: ${MAIL_ENABLED:-true}
     depends_on:
-      redis:                          
+      mongodb:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - collab-network
@@ -69,10 +118,15 @@ services:
     container_name: collab-room
     restart: unless-stopped
     environment:
+      NODE_ENV: production
       PORT: 4002
-      MONGO_URI: ${MONGO_URI}        
-      REDIS_URL: redis://redis:6379
+      MONGO_URI: ${MONGO_URI:?set MONGO_URI in .env}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set INTERNAL_API_KEY in .env}
+      INTERNAL_EVENTS_KEY: ${INTERNAL_EVENTS_KEY:-}
     depends_on:
+      mongodb:
+        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
@@ -89,14 +143,20 @@ services:
       dockerfile: services/collaboration-service/Dockerfile
     container_name: collab-realtime
     restart: unless-stopped
-    ports:
-      - "4003:4003"
+    # No public port: the browser reaches it through nginx (/socket.io/).
     environment:
+      NODE_ENV: production
       PORT: 4003
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       ROOM_SERVICE_URL: http://room-service:4002
-      CLIENT_URL: http://localhost:5173
+      CLIENT_URL: ${CLIENT_URL:-http://localhost}
       SERVER_ID: collab-server-1
+      AUTH_SERVICE_URL: http://auth-service:4001
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set INTERNAL_API_KEY in .env}
+      INTERNAL_EVENTS_KEY: ${INTERNAL_EVENTS_KEY:-}
+      TURN_URLS: ${TURN_URLS:-}
+      TURN_SECRET: ${TURN_SECRET:-}
+      STUN_URLS: ${STUN_URLS:-}
     depends_on:
       redis:
         condition: service_healthy
@@ -117,11 +177,24 @@ services:
     container_name: collab-ai
     restart: unless-stopped
     environment:
-      PORT: 4004                      
-      REDIS_URL: redis://redis:6379
-      MISTRAL_API_KEY: ${MISTRAL_API_KEY}
+      NODE_ENV: production
+      PORT: 4004
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:?set MISTRAL_API_KEY in .env}
+      ROOM_SERVICE_URL: http://room-service:4002
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set INTERNAL_API_KEY in .env}
+      MISTRAL_MODEL: ${MISTRAL_MODEL:-mistral-small-latest}
+      LANGSMITH_TRACING: ${LANGSMITH_TRACING:-false}
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
+      LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-coduet}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
     depends_on:
       redis:
+        condition: service_healthy
+      room-service:
         condition: service_healthy
     networks:
       - collab-network
@@ -138,11 +211,28 @@ services:
     container_name: collab-executor
     restart: unless-stopped
     environment:
+      NODE_ENV: production
       PORT: 4005
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set INTERNAL_API_KEY in .env}
+      ENABLED_LANGUAGES: javascript,python,typescript,java,cpp,go
+    read_only: true
+    tmpfs:
+      - /tmp:rw,exec,size=64m,mode=1777
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 512m
+    cpus: 1.0
+    # Isolated: no Redis/Mongo/other services, and no outbound internet (exec-net is internal).
     networks:
-      - collab-network
+      - exec-net
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:4005/health"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4005/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -154,15 +244,18 @@ services:
     container_name: collab-gateway
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3001:3000" # debugging / scripts/seed.sh only; users go through nginx
     environment:
+      NODE_ENV: production
       PORT: 3000
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       AUTH_SERVICE_URL: http://auth-service:4001
       ROOM_SERVICE_URL: http://room-service:4002
       COLLAB_SERVICE_URL: http://collaboration-service:4003
-      AI_SERVICE_URL: http://ai-service:4004           
-      EXECUTE_SERVICE_URL: http://code-execution-service:4005  
+      AI_SERVICE_URL: http://ai-service:4004
+      EXECUTE_SERVICE_URL: http://code-execution-service:4005
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set INTERNAL_API_KEY in .env}
+      CLIENT_URL: ${CLIENT_URL:-http://localhost}
     depends_on:
       auth-service:
         condition: service_healthy
@@ -173,9 +266,10 @@ services:
       ai-service:
         condition: service_healthy
       code-execution-service:
-        condition: service_healthy    
+        condition: service_healthy
     networks:
       - collab-network
+      - exec-net
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
       interval: 15s
@@ -201,13 +295,11 @@ services:
     build:
       context: ./client
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ""
+        VITE_SOCKET_URL: ""
     container_name: collab-client
     restart: unless-stopped
-    ports:
-      - "5173:5173"
-    environment:
-      VITE_API_URL: http://localhost:3000
-      VITE_SOCKET_URL: http://localhost:4003
     depends_on:
       - api-gateway
     networks:
@@ -216,6 +308,9 @@ services:
 networks:
   collab-network:
     driver: bridge
+  exec-net:
+    driver: bridge
+    internal: true
 
 volumes:
   mongo-data:

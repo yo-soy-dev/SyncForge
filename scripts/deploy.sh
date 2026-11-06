@@ -50,6 +50,7 @@ ssh -i "$EC2_KEY" \
   echo "Docker Compose pull + restart..."
   docker compose pull 2>/dev/null || true
   docker compose up --build -d
+  docker compose restart nginx
 
   echo "Old images cleanup..."
   docker image prune -f

@@ -3,8 +3,8 @@ print("MongoDB initialization starting...")
 
 db = db.getSiblingDB("realtime-collab")
 
-db.createCollection("users")
-db.createCollection("rooms")
+db.createCollection("users");
+db.createCollection("rooms");
 db.createCollection("sessions") 
 
 db.users.createIndex(
@@ -44,15 +44,16 @@ db.rooms.createIndex(
 
 
 if (db.users.countDocuments() === 0) {
-  print("Inserting demo user...")
+  print("Inserting demo user...");
+
   db.users.insertOne({
     username: "demo",
     email: "demo@example.com",
-    // password: "demo123" — hashed (bcrypt se)
+    // Password is stored as a bcrypt hash.
     password: "$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/lA5sWUi6.",
     createdAt: new Date(),
     updatedAt: new Date()
-  })
+  });
 }
 
 print("MongoDB initialization complete!")
