@@ -1,619 +1,435 @@
-import { useState, useEffect } from "react"
-
-import { useNavigate } from "react-router-dom"
-
-import {
-  Plus,
-  Search,
-  Code2,
-  Sparkles,
-} from "lucide-react"
-
+import { useState, useEffect, useMemo } from "react"
+import { useNavigate, useLocation } from "react-router-dom"
+import { Plus, Search, ArrowRight, Hash, Code2, Users, Mic } from "lucide-react"
 import { toast } from "sonner"
 
 import { roomApi } from "../services/api"
-
 import { useAuth } from "../context/AuthContext"
-
 import { Navbar } from "../components/Navbar"
-import { RoomCard } from "../components/RoomCard"
+import { RoomCard, isRoomOwner } from "../components/RoomCard"
 import { Loader } from "../components/Loader"
+import { Modal } from "../components/Modal"
+import { ConfirmDialog } from "../components/ConfirmDialog"
+import { LANGUAGES, LANGUAGE_COLORS } from "../utils/constants"
+import { getPreferences } from "../utils/preferences"
 
-import { LANGUAGES } from "../utils/constants"
+const inputCls =
+  "w-full min-w-0 h-11 bg-ink border border-line rounded-lg px-3 text-sm text-fg placeholder:text-muted focus:border-ember focus:outline-none transition-colors"
+
+const greeting = () => {
+  const h = new Date().getHours()
+  if (h < 12) return "Good morning"
+  if (h < 18) return "Good afternoon"
+  return "Good evening"
+}
+
+const FILTERS = [
+  { id: "all", label: "All" },
+  { id: "collab", label: "Collab" },
+  { id: "interview", label: "Interview" },
+]
 
 export const Home = () => {
   const [rooms, setRooms] = useState([])
-
   const [loading, setLoading] = useState(true)
-
-  const [joinCode, setJoinCode] = useState("")
-
-  const [showCreate, setShowCreate] = useState(false)
-
-  const [newRoom, setNewRoom] = useState({
-    name: "",
-    language: "javascript",
-  })
-
   const [error, setError] = useState("")
 
-  const { user } = useAuth()
+  const [joinCode, setJoinCode] = useState("")
+  const [query, setQuery] = useState("")
+  const [filter, setFilter] = useState("all")
 
+  const [showCreate, setShowCreate] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [newRoom, setNewRoom] = useState(() => ({
+    name: "",
+    language: getPreferences().defaultLanguage,
+    type: "collab",
+  }))
+
+  const [confirm, setConfirm] = useState({ open: false, action: null, room: null })
+  const [busy, setBusy] = useState(false)
+
+  const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // The command palette sends us here with { create: true } to open the New room dialog
+  useEffect(() => {
+    if (location.state?.create) {
+      if (location.state.type) {
+        setNewRoom((p) => ({ ...p, type: location.state.type }))
+      }
+      setShowCreate(true)
+      navigate(location.pathname, { replace: true, state: null })
+    }
+  }, [location.state, location.pathname, navigate])
 
   useEffect(() => {
     const fetchRooms = async () => {
       try {
         const data = await roomApi.getMyRooms()
-
         setRooms(data.rooms)
       } catch (err) {
-        setError(err.message)
-
+        setError(err.response?.data?.message || err.message)
         toast.error("Failed to load rooms")
       } finally {
         setLoading(false)
       }
     }
-
     fetchRooms()
   }, [])
 
+  const stats = useMemo(
+    () => ({
+      total: rooms.length,
+      collab: rooms.filter((r) => r.type !== "interview").length,
+      interview: rooms.filter((r) => r.type === "interview").length,
+      owned: rooms.filter((r) => isRoomOwner(r, user?.id)).length,
+    }),
+    [rooms, user?.id],
+  )
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return rooms.filter((r) => {
+      const isInterview = r.type === "interview"
+      const matchesFilter =
+        filter === "all" || (filter === "interview" ? isInterview : !isInterview)
+      return matchesFilter && (r.name || "").toLowerCase().includes(q)
+    })
+  }, [rooms, query, filter])
+
   const handleCreate = async (e) => {
     e.preventDefault()
-
     setError("")
-
+    setCreating(true)
     try {
       const data = await roomApi.create(newRoom)
-
       setRooms((prev) => [data.room, ...prev])
-
       setShowCreate(false)
-
-      setNewRoom({
-        name: "",
-        language: "javascript",
-      })
-
-      toast.success("Room created successfully")
-
+      setNewRoom({ name: "", language: getPreferences().defaultLanguage, type: "collab" })
+      toast.success("Room created")
       navigate(`/room/${data.room._id}`)
     } catch (err) {
-      setError(err.message)
-
-      toast.error(err.message)
+      toast.error(err.response?.data?.message || err.message)
+    } finally {
+      setCreating(false)
     }
   }
 
   const handleJoin = async (e) => {
     e.preventDefault()
-
     setError("")
-
     try {
-      const data = await roomApi.join(
-        joinCode.toUpperCase()
-      )
-
-      toast.success("Joined room successfully")
-
+      const data = await roomApi.join(joinCode.toUpperCase())
+      toast.success("Joined room")
       navigate(`/room/${data.room._id}`)
     } catch (err) {
-      setError(err.message)
-
-      toast.error(err.message)
+      toast.error(err.response?.data?.message || err.message)
     }
   }
 
-  const handleDelete = async (roomId) => {
-    if (!window.confirm("Delete this room permanently?")) return
+  const runConfirm = async () => {
+    const { action, room } = confirm
+    if (!room) return
+    setBusy(true)
     try {
-      await roomApi.delete(roomId)
-      setRooms(prev => prev.filter(r => r._id !== roomId))
-      toast.success("Room deleted")
+      if (action === "delete") {
+        await roomApi.delete(room._id)
+        toast.success("Room deleted")
+      } else {
+        await roomApi.leave(room._id)
+        toast.success("You left the room")
+      }
+      setRooms((prev) => prev.filter((r) => r._id !== room._id))
+      setConfirm((c) => ({ ...c, open: false }))
     } catch (err) {
-      toast.error(err.message)
-    }
-  }
-
-  const handleLeave = async (roomId) => {
-    if (!window.confirm("Leave this room?")) return
-    try {
-      await roomApi.leave(roomId)
-      setRooms(prev => prev.filter(r => r._id !== roomId))
-      toast.success("Left the room")
-    } catch (err) {
-      toast.error(err.message)
+      toast.error(err.response?.data?.message || err.message)
+    } finally {
+      setBusy(false)
     }
   }
 
   if (loading) return <Loader message="Loading your rooms..." />
 
-
+  const isDelete = confirm.action === "delete"
 
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col">
-
+    <div className="min-h-screen bg-ink flex flex-col">
       <Navbar />
 
-      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 py-6">
-
-        <div
-          className="
-            relative
-            overflow-hidden
-            rounded-3xl
-            border border-gray-800
-            bg-gradient-to-br from-gray-900 to-gray-950
-            p-4 sm:p-6
-            mb-8
-          "
-        >
-
-          <div
-            className="
-              absolute
-              top-0 right-0
-              w-56 h-56
-              bg-amber-400/10
-              blur-3xl
-              rounded-full
-            "
-          />
-
-          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-
-            <div>
-
-              <div
-                className="
-                  inline-flex
-                  items-center
-                  gap-2
-                  px-3 py-1
-                  rounded-full
-                  border border-amber-400/20
-                  bg-amber-400/10
-                  text-amber-400
-                  text-xs
-                  font-medium
-                  mb-4
-                "
-              >
-                <Sparkles size={14} />
-                Real-time Collaboration Workspace
-              </div>
-
-              <h1
-                className="
-                  text-xl
-                  sm:text-2xl
-                  md:text-3xl
-                  lg:text-4xl
-                  font-bold
-                  text-white
-                  leading-tight
-                "
-              >
-                Welcome back,
-                <br />
-
-                <span className="text-amber-400">
-                  {user?.username}
-                </span>
-              </h1>
-
-              <p
-                className="
-                  mt-4
-                  text-gray-400
-                  text-sm sm:text-base
-                  max-w-xl
-                  leading-relaxed
-                "
-              >
-                Create collaborative coding rooms,
-                invite teammates, review code with AI,
-                and build together in real time.
-              </p>
-            </div>
-
-            <button
-              onClick={() => setShowCreate(true)}
-              className="
-                shrink-0
-                h-fit
-                flex items-center justify-center gap-2
-                px-5 py-3.5 sm:py-3
-                rounded-2xl
-                bg-amber-400
-                hover:bg-amber-300
-                text-gray-950
-                font-semibold
-                transition-all
-              "
-            >
-              <Plus size={18} />
-              Create Room
-            </button>
+      <main className="flex-1 w-full min-w-0 max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        {/* HEADER */}
+        <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
+          <div className="min-w-0">
+            <p className="font-mono text-xs text-sync tracking-wide mb-2">
+              ● WORKSPACE
+            </p>
+            <h1 className="font-display text-3xl sm:text-4xl font-bold text-fg leading-tight">
+              {greeting()},{" "}
+              <span className="text-ember break-words">{user?.username}</span>
+            </h1>
+            <p className="mt-2 text-sm text-muted max-w-xl">
+              Code together in real time, review with AI, and run technical
+              interviews from one place.
+            </p>
           </div>
-        </div>
+
+          <button
+            onClick={() => setShowCreate(true)}
+            className="shrink-0 h-11 px-5 inline-flex items-center justify-center gap-2 rounded-lg bg-ember text-ink text-sm font-semibold hover:brightness-110 transition"
+          >
+            <Plus size={17} />
+            New room
+          </button>
+        </header>
 
         {error && (
-          <div
-            className="
-              mb-6
-              p-4
-              rounded-2xl
-              bg-red-900/20
-              border border-red-800
-              text-red-400
-              text-sm
-              sm:text-base
-            "
-          >
+          <div className="mt-6 p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 text-sm">
             {error}
           </div>
         )}
 
-        <div
-          className="
-            bg-gray-900
-            border border-gray-800
-            rounded-3xl
-            p-5
-            mb-8
-          "
+        {/* STAT STRIP: one connected block instead of 4 separate cards */}
+        <section
+          aria-label="Overview"
+          className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-px bg-line border border-line rounded-2xl overflow-hidden"
         >
-
-          <div className="flex items-center gap-2 mb-4">
-
-            <div
-              className="
-                w-10 h-10
-                rounded-xl
-                bg-blue-500/10
-                border border-blue-500/20
-                flex items-center justify-center
-              "
-            >
-              <Search
-                size={18}
-                className="text-blue-400"
-              />
-            </div>
-
-            <div>
-              <h2 className="text-white font-semibold">
-                Join Existing Room
-              </h2>
-
-              <p className="text-xs text-gray-500">
-                Enter a room code to collaborate
+          {[
+            { label: "Total rooms", value: stats.total, color: "text-fg" },
+            { label: "Collab", value: stats.collab, color: "text-sync" },
+            { label: "Interviews", value: stats.interview, color: "text-ai" },
+            { label: "Owned by you", value: stats.owned, color: "text-gold" },
+          ].map((s) => (
+            <div key={s.label} className="bg-surface px-4 py-4 sm:px-5">
+              <p className={`font-display text-3xl font-bold ${s.color}`}>
+                {s.value}
               </p>
+              <p className="mt-1 text-xs text-muted">{s.label}</p>
             </div>
+          ))}
+        </section>
+
+        {/* JOIN BAR */}
+        <form
+          onSubmit={handleJoin}
+          className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3 bg-surface border border-line rounded-2xl p-3 sm:p-4"
+        >
+          <div className="flex items-center gap-2 text-sm text-muted sm:w-40 shrink-0">
+            <Hash size={16} className="text-ember" />
+            Have a room code?
           </div>
-
-          <form
-            onSubmit={handleJoin}
-            className="
-              flex flex-col sm:flex-row
-              gap-3 sm:gap-4
-            "
+          <input
+            value={joinCode}
+            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+            placeholder="ENTER CODE"
+            maxLength={10}
+            aria-label="Room code"
+            className={`${inputCls} flex-1 font-mono uppercase tracking-[0.2em]`}
+          />
+          <button
+            type="submit"
+            disabled={joinCode.length < 6}
+            className="h-11 px-5 inline-flex items-center justify-center gap-2 rounded-lg border border-ember/40 text-ember text-sm font-semibold hover:bg-ember/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
+            Join
+            <ArrowRight size={16} />
+          </button>
+        </form>
 
-            <input
-              value={joinCode}
-              onChange={(e) =>
-                setJoinCode(
-                  e.target.value.toUpperCase()
-                )
-              }
-              placeholder="ENTER ROOM CODE"
-              maxLength={8}
-              className="
-                w-full 
-                min-w-0
-                flex-1
-                bg-gray-800
-                text-white
-                font-mono
-                rounded-2xl
-                px-4 py-3
-                text-sm
-                sm:text-base
-                border border-gray-700
-                focus:border-amber-400
-                focus:outline-none
-                uppercase
-                tracking-wider
-              "
-            />
+        {/* ROOMS TOOLBAR */}
+        <div className="mt-10 mb-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <h2 className="font-display text-xl font-semibold text-fg">
+            Your rooms
+          </h2>
 
-            <button
-              type="submit"
-              disabled={joinCode.length < 6}
-              className="
-                py-3 sm:py-3.5
-                px-6
-                rounded-2xl
-                bg-gray-800
-                text-amber-400
-                font-semibold
-                text-sm
-                sm:text-base
-                hover:bg-gray-700
-                disabled:opacity-40
-                disabled:cursor-not-allowed
-                transition-all
-              "
-            >
-              Join Room
-            </button>
-          </form>
-        </div>
-
-        <div className="flex items-center gap-3 sm:gap-4 mb-5">
-
-          <div
-            className="
-              w-10 h-10
-              rounded-xl
-              bg-amber-400/10
-              border border-amber-400/20
-              flex items-center justify-center
-            "
-          >
-            <Code2
-              size={18}
-              className="text-amber-400"
-            />
-          </div>
-
-          <div>
-            <h2 className="text-white font-semibold">
-              Your Rooms
-            </h2>
-
-            <p className="text-xs text-gray-500">
-              {rooms.length} total rooms
-            </p>
-          </div>
-        </div>
-
-        {rooms.length === 0 ? (
-          <div
-            className="
-              border border-dashed border-gray-800
-              rounded-3xl
-              py-20 px-6
-              text-center
-              bg-gray-900/40
-            "
-          >
-
-            <div
-              className="
-                w-20 h-20
-                mx-auto mb-5
-                rounded-3xl
-                bg-gray-800
-                flex items-center justify-center
-              "
-            >
-              <Code2
-                size={34}
-                className="text-gray-500"
+          <div className="flex flex-col sm:flex-row gap-3 min-w-0">
+            <div className="relative sm:w-64">
+              <Search
+                size={15}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+              />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search rooms"
+                aria-label="Search rooms"
+                className={`${inputCls} pl-9`}
               />
             </div>
 
-            <h3 className="text-white text-lg font-semibold mb-2">
+            <div
+              role="tablist"
+              className="flex p-1 bg-surface border border-line rounded-lg"
+            >
+              {FILTERS.map((f) => (
+                <button
+                  key={f.id}
+                  role="tab"
+                  aria-selected={filter === f.id}
+                  onClick={() => setFilter(f.id)}
+                  className={`flex-1 sm:flex-none px-3 h-9 rounded-md text-xs font-medium transition-colors ${filter === f.id
+                      ? "bg-ink text-fg"
+                      : "text-muted hover:text-fg"
+                    }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ROOM GRID / EMPTY STATES */}
+        {rooms.length === 0 ? (
+          <div className="border border-dashed border-line rounded-2xl py-16 px-6 text-center">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-xl border border-line bg-surface flex items-center justify-center">
+              <Code2 size={22} className="text-muted" />
+            </div>
+            <h3 className="font-display text-lg font-semibold text-fg">
               No rooms yet
             </h3>
-
-            <p className="text-gray-500 text-sm sm:text-base mb-6">
-              Create your first collaborative coding
-              room to get started.
+            <p className="mt-1 mb-6 text-sm text-muted">
+              Create your first room, or join one with a code.
             </p>
-
             <button
               onClick={() => setShowCreate(true)}
-              className="
-    w-full sm:w-auto
-    flex items-center justify-center gap-2
-    px-5 py-3
-    rounded-2xl
-    bg-amber-400
-    hover:bg-amber-300
-    text-gray-950
-    font-semibold
-    transition-all
-  "
+              className="h-11 px-5 inline-flex items-center gap-2 rounded-lg bg-ember text-ink text-sm font-semibold hover:brightness-110 transition"
             >
-              <Plus size={18} />
-              Create First Room
+              <Plus size={17} />
+              Create first room
             </button>
           </div>
+        ) : visible.length === 0 ? (
+          <div className="border border-dashed border-line rounded-2xl py-12 text-center text-sm text-muted">
+            No rooms match your search.
+          </div>
         ) : (
-          <div
-            className="
-              grid
-              grid-cols-1
-              md:grid-cols-2
-              xl:grid-cols-3
-              gap-3 sm:gap-4
-            "
-          >
-            {rooms.map((room) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {visible.map((room) => (
               <RoomCard
                 key={room._id}
                 room={room}
                 currentUserId={user?.id}
-                onDelete={handleDelete}
-                onLeave={handleLeave}
+                onDelete={(r) => setConfirm({ open: true, action: "delete", room: r })}
+                onLeave={(r) => setConfirm({ open: true, action: "leave", room: r })}
               />
             ))}
           </div>
         )}
       </main>
 
-      {showCreate && (
-        <div
-          className="
-            fixed inset-0
-            z-50
-            bg-black/70
-            backdrop-blur-sm
-            flex items-center justify-center
-            p-4
-          "
-        >
-
-          <div
-            className="
-              w-full max-w-md
-              bg-gray-900
-              border border-gray-800
-              rounded-3xl
-              p-4 sm:p-6
-            "
-          >
-
-            <div className="mb-6">
-
-              <h2 className="text-xl font-semibold text-white">
-                Create New Room
-              </h2>
-
-              <p className="text-sm sm:text-base text-gray-500 mt-1">
-                Start collaborating instantly
-              </p>
-            </div>
-
-            <form
-              onSubmit={handleCreate}
-              className="space-y-5"
-            >
-
-              <div>
-
-                <label className="block text-sm sm:text-base text-gray-400 mb-2">
-                  Room Name
-                </label>
-
-                <input
-                  value={newRoom.name}
-                  onChange={(e) =>
-                    setNewRoom((prev) => ({
-                      ...prev,
-                      name: e.target.value,
-                    }))
-                  }
-                  placeholder="My Awesome Workspace"
-                  required
-                  className="
-                    w-full
-                    min-w-0
-                    bg-gray-800
-                    text-white
-                    rounded-2xl
-                    px-4 py-3
-                    text-sm
-                    sm:text-base
-                    border border-gray-700
-                    focus:border-amber-400
-                    focus:outline-none
-                  "
-                />
-              </div>
-
-              <div>
-
-                <label className="block text-sm sm:text-base text-gray-400 mb-2">
-                  Programming Language
-                </label>
-
-                <select
-                  value={newRoom.language}
-                  onChange={(e) =>
-                    setNewRoom((prev) => ({
-                      ...prev,
-                      language: e.target.value,
-                    }))
-                  }
-                  className="
-                    w-full
-                    min-w-0
-                    bg-gray-800
-                    text-white
-                    rounded-2xl
-                    px-4 py-3
-                    text-sm
-                    sm:text-base
-                    border border-gray-700
-                    focus:border-amber-400
-                    focus:outline-none
-                  "
-                >
-                  {LANGUAGES.map((language) => (
-                    <option
-                      key={language}
-                      value={language}
-                    >
-                      {language}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex gap-2 sm:gap-3 pt-2">
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowCreate(false)
-                  }
-                  className="
-                    flex-1
-                    py-3
-                    rounded-2xl
-                    bg-gray-800
-                    text-gray-300
-                    hover:bg-gray-700
-                    transition-all
-                  "
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  className="
-                    flex-1
-                    py-3
-                    rounded-2xl
-                    bg-amber-400
-                    hover:bg-amber-300
-                    text-gray-950
-                    font-semibold
-                    transition-all
-                  "
-                >
-                  Create Room
-                </button>
-              </div>
-            </form>
+      {/* CREATE ROOM */}
+      <Modal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        title="New room"
+        description="Pick a language and how you want to work."
+      >
+        <form onSubmit={handleCreate} className="space-y-5">
+          <div>
+            <label htmlFor="room-name" className="block text-xs text-muted mb-2">
+              Room name
+            </label>
+            <input
+              id="room-name"
+              value={newRoom.name}
+              onChange={(e) => setNewRoom((p) => ({ ...p, name: e.target.value }))}
+              placeholder="e.g. Two Sum pairing"
+              required
+              autoFocus
+              className={inputCls}
+            />
           </div>
-        </div>
-      )}
+
+          <div>
+            <p className="text-xs text-muted mb-2">Language</p>
+            <div className="grid grid-cols-3 gap-2">
+              {LANGUAGES.map((lang) => (
+                <button
+                  key={lang}
+                  type="button"
+                  onClick={() => setNewRoom((p) => ({ ...p, language: lang }))}
+                  className={`flex items-center gap-2 px-2.5 h-10 rounded-lg border font-mono text-xs capitalize transition-colors ${newRoom.language === lang
+                      ? "border-ember bg-ember/10 text-fg"
+                      : "border-line text-muted hover:border-muted"
+                    }`}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ background: LANGUAGE_COLORS[lang] || "#8b8f9a" }}
+                  />
+                  <span className="truncate">{lang}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs text-muted mb-2">Room type</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setNewRoom((p) => ({ ...p, type: "collab" }))}
+                className={`text-left p-3 rounded-lg border transition-colors ${newRoom.type === "collab"
+                    ? "border-sync bg-sync/10"
+                    : "border-line hover:border-muted"
+                  }`}
+              >
+                <Users size={16} className="text-sync mb-2" />
+                <p className="text-sm font-medium text-fg">Collaboration</p>
+                <p className="text-xs text-muted mt-0.5">Code together live</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setNewRoom((p) => ({ ...p, type: "interview" }))}
+                className={`text-left p-3 rounded-lg border transition-colors ${newRoom.type === "interview"
+                    ? "border-ai bg-ai/10"
+                    : "border-line hover:border-muted"
+                  }`}
+              >
+                <Mic size={16} className="text-ai mb-2" />
+                <p className="text-sm font-medium text-fg">Interview</p>
+                <p className="text-xs text-muted mt-0.5">Scorecards and AI</p>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => setShowCreate(false)}
+              className="flex-1 h-11 rounded-lg border border-line text-fg text-sm font-medium hover:border-muted transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={creating}
+              className="flex-1 h-11 rounded-lg bg-ember text-ink text-sm font-semibold hover:brightness-110 disabled:opacity-60 transition"
+            >
+              {creating ? "Creating..." : "Create room"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* DELETE / LEAVE CONFIRM (replaces window.confirm) */}
+      <ConfirmDialog
+        open={confirm.open}
+        danger
+        loading={busy}
+        title={isDelete ? "Delete this room?" : "Leave this room?"}
+        description={
+          isDelete
+            ? `"${confirm.room?.name}" will be permanently deleted for everyone. This can't be undone.`
+            : `You'll need the room code to rejoin "${confirm.room?.name}".`
+        }
+        confirmLabel={isDelete ? "Delete room" : "Leave room"}
+        onConfirm={runConfirm}
+        onCancel={() => setConfirm((c) => ({ ...c, open: false }))}
+      />
     </div>
   )
-};
-
-
-
-
-
-
-
+}

@@ -1,16 +1,94 @@
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
 @import "tailwindcss";
 
+@theme {
+  /* ---- Coduet brand tokens ---- */
+  --color-ink: #0e0f13;
+  --color-surface: #16171d;
+  --color-line: #24262e;
+  --color-fg: #ece9e2;
+  --color-muted: #8b8f9a;
 
+  --color-ember: #ff6a3d;   /* primary actions, brand */
+  --color-sync: #4dd6c8;    /* live / collaboration */
+  --color-ai: #9b8cff;      /* everything AI */
+  --color-gold: #ffc857;    /* tiny highlights only */
+
+  --font-display: "Bricolage Grotesque", "Inter", sans-serif;
+  --font-sans: "Inter", -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+
+}
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  
+  min-height: 100%;
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 body {
   margin: 0;
-  background-color: #030712;
-  color: white;
-  font-family: 'Inter', -apple-system, sans-serif;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background-color: var(--color-ink);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  overflow-x: clip; /* one stray wide element can never make the whole page scroll sideways */
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+code, kbd, pre, .font-mono {
+  font-family: var(--font-mono);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+img,
+svg {
+  max-width: 100%;
+}
+
+input,
+select,
+textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Visible keyboard focus (accessibility + looks professional) */
+:focus-visible {
+  outline: 2px solid var(--color-ember);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-ember) 35%, transparent);
 }
 
 /* Monaco editor scrollbar */
@@ -22,22 +100,92 @@ body {
   z-index: 999999 !important;
 }
 
-
-
-
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #111827;
+  background: var(--color-surface);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: var(--color-line);
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #4b5563;
+  background: var(--color-muted);
+}
+
+
+
+
+/* ---- Live remote cursors (see hooks/useRemoteCursors.js) ---- */
+.rs {
+  border-radius: 2px;
+}
+.rs-0 { background: rgba(255, 106, 61, 0.22); }
+.rs-1 { background: rgba(77, 214, 200, 0.22); }
+.rs-2 { background: rgba(155, 140, 255, 0.22); }
+.rs-3 { background: rgba(255, 200, 87, 0.22); }
+
+.rc {
+  position: absolute;
+  height: 100%;
+  border-left: 2px solid var(--c);
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.rc::after {
+  content: var(--n);
+  position: absolute;
+  left: -2px;
+  bottom: 100%;
+  padding: 1px 6px;
+  border-radius: 4px 4px 4px 0;
+  background: var(--c);
+  color: #0e0f13;
+  font: 600 10px/1.5 var(--font-sans);
+  white-space: nowrap;
+  z-index: 20;
+}
+
+
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea:not(.inputarea) {
+    font-size: 16px !important;
+  }
+}
+
+/* 
+.room-lock,
+.room-lock body {
+  height: 100dvh;
+  overflow: hidden;
+} */
+
+
+
+/* Lock the entire application viewport on Room pages */
+html.room-lock,
+html.room-lock body,
+html.room-lock #root {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+html.room-lock {
+  overscroll-behavior: none;
+}
+
+html.room-lock body {
+  position: fixed;
+  inset: 0;
+  height: 100dvh;
 }

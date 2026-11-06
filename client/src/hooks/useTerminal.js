@@ -25,7 +25,7 @@ export const useTerminal = (language) => {
       }
 
       setRunning(true)
-      setOutput([{ type: "info", text: `▶ Running ${language}...` }])
+      setOutput([{ type: "info", text: `Running ${language}...`}])
 
       try {
         const data = await executeApi.run({ code, language, input })
@@ -37,12 +37,12 @@ export const useTerminal = (language) => {
           setOutput(prev => [...prev, { type: "error", text: data.stderr }])
         }
         if (!data.stdout && !data.stderr) {
-          setOutput(prev => [...prev, { type: "info", text: "✓ No output" }])
+          setOutput(prev => [...prev, { type: "info", text: "No output" }])
         }
 
         setOutput(prev => [...prev, {
           type: "info",
-          text: `─── Exited in ${data.executionTime || "?"}ms ───`,
+          text: `Exited in ${data.executionTime || "?"} ms`,
         }])
       } catch (err) {
         setOutput(prev => [...prev, {
@@ -56,8 +56,8 @@ export const useTerminal = (language) => {
     [language]
   )
 
-  // ← YEH MISSING THA
+  
   const clear = useCallback(() => setOutput([]), [])
 
-  return { output, running, run, clear }  // ← YEH BHI MISSING THA
+  return { output, running, run, clear } 
 }

@@ -1,7 +1,11 @@
 import { useState } from "react"
 import MonacoEditor from "@monaco-editor/react"
 import { useEditor } from "../hooks/useEditor"
-import { Users, X } from "lucide-react"
+import { useRemoteCursors } from "../hooks/useRemoteCursors"
+import { useAuth } from "../context/AuthContext"
+import { X, FileCode2 } from "lucide-react"
+import { getPreferences } from "../utils/preferences"
+import { defineCoduetTheme } from "../utils/monacoTheme"
 
 export const Editor = ({
   roomId,
@@ -9,13 +13,22 @@ export const Editor = ({
   onCodeChange,
   onSelectionChange,
   editorRef,
-  hideUserList = false,
+  followSocketId = null,
+  overlay = null,
+  followName = "",
+  onStopFollow,
+  readOnly = false,
 }) => {
-  const { handleMount, users } = useEditor(roomId)
-  const [showUsers, setShowUsers] = useState(false)
+  const { handleMount, users, cursors } = useEditor(roomId, { trackCursors: true })
+  const { user } = useAuth()
+  const [editorInstance, setEditorInstance] = useState(null)
+
+  useRemoteCursors(editorInstance, users, cursors, user?.id, followSocketId)
+
 
   const handleEditorMount = (editor, monaco) => {
     if (editorRef) editorRef.current = editor
+    setEditorInstance(editor)
 
     handleMount(editor, monaco)
 
@@ -26,79 +39,55 @@ export const Editor = ({
   }
 
   return (
-    <div className="relative flex flex-col md:flex-row h-full w-full overflow-hidden bg-gray-950">
-
-      {!hideUserList && (
-        <button
-          onClick={() => setShowUsers(true)}
-          className="md:hidden absolute top-3 left-3 z-30 flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-900/90 border border-gray-700 text-gray-300 backdrop-blur"
-        >
-          <Users size={16} />
-          <span className="text-xs font-medium">
-            {users.length + 1}
-          </span>
-        </button>
-      )}
-
-      {!hideUserList && showUsers && (
-        <div className="md:hidden fixed inset-0 z-40 flex">
-          <div
-            onClick={() => setShowUsers(false)}
-            className="flex-1 bg-black/60"
-          />
-          <div className="w-72 max-w-[85vw] bg-gray-900 border-l border-gray-800 h-full flex flex-col">
-            <div className="flex items-center justify-between px-4 py-4 border-b border-gray-800">
-              <h2 className="text-white font-semibold text-sm">
-                Active Users
-              </h2>
-              <button
-                onClick={() => setShowUsers(false)}
-                className="w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-gray-400"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="p-4 text-sm text-gray-400">
-              {users.length === 0
-                ? "No active users"
-                : users.map((u, i) => (
-                    <div key={i} className="py-1">
-                      {u.name || "Anonymous User"}
-                    </div>
-                  ))}
-            </div>
-          </div>
+    <div className="relative flex flex-col md:flex-row h-full min-h-0 w-full min-w-0 overflow-hidden bg-ink">
+      {overlay}
+      {followSocketId && (
+        <div className="absolute top-12 right-4 z-20 flex items-center gap-2 h-8 pl-3 pr-1.5 rounded-full border border-sync/40 bg-surface/90 backdrop-blur text-xs text-fg">
+          <span className="w-1.5 h-1.5 rounded-full bg-sync animate-pulse" />
+          Following {followName || "collaborator"}
+          <button
+            onClick={onStopFollow}
+            aria-label="Stop following"
+            className="w-6 h-6 rounded-full flex items-center justify-center text-muted hover:text-fg hover:bg-ink transition-colors"
+          >
+            <X size={12} />
+          </button>
         </div>
       )}
 
-      <div className="flex-1 min-w-0 flex flex-col">
 
-        <div className="h-12 border-b border-gray-800 bg-gray-900 flex items-center justify-between px-3 sm:px-4">
+
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col">
+
+        <div className="h-10 border-b border-line bg-ink flex items-center justify-between px-3 sm:px-4">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="flex gap-1.5">
-              <span className="w-3 h-3 rounded-full bg-red-500" />
-              <span className="w-3 h-3 rounded-full bg-yellow-500" />
-              <span className="w-3 h-3 rounded-full bg-green-500" />
-            </div>
+            <FileCode2 size={14} className="text-ember shrink-0" />
 
-            <span className="text-xs sm:text-sm text-gray-400 font-medium ml-3 truncate">
+            <span className="font-mono text-xs text-fg truncate">
               main.{
                 language === "javascript"
                   ? "js"
                   : language === "typescript"
-                  ? "ts"
-                  : language === "python"
-                  ? "py"
-                  : language
+                    ? "ts"
+                    : language === "python"
+                      ? "py"
+                      : language === "java"
+                        ? "java"
+                        : language === "cpp"
+                          ? "cpp"
+                          : language === "go"
+                            ? "go"
+                            : language
               }
             </span>
           </div>
 
-          <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500">
+          <div className="hidden sm:flex items-center gap-3 font-mono text-[11px] text-muted">
             <span className="capitalize">{language}</span>
-            <span>•</span>
-            <span>Live Collaboration</span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className={`w-1.5 h-1.5 rounded-full ${readOnly ? "bg-gold" : "bg-sync animate-pulse"}`} />
+              {readOnly ? "Read-only" : "Live"}
+            </span>
           </div>
         </div>
 
@@ -106,20 +95,23 @@ export const Editor = ({
           <MonacoEditor
             height="100%"
             language={language}
-            theme="vs-dark"
+            theme="coduet"
+            beforeMount={defineCoduetTheme}
             onMount={handleEditorMount}
             onChange={(value) => onCodeChange?.(value || "")}
             loading={
-              <div className="h-full flex items-center justify-center bg-gray-950 text-gray-400">
+              <div className="h-full flex items-center justify-center bg-ink text-muted">
                 Loading editor...
               </div>
             }
             options={{
-              fontSize: 14,
+              fontSize:
+                getPreferences().fontSize -
+                (window.matchMedia("(max-width: 640px)").matches ? 2 : 0),
               minimap: { enabled: false },
               scrollBeyondLastLine: false,
               automaticLayout: true,
-              wordWrap: "on",
+              wordWrap: getPreferences().wordWrap ? "on" : "off",
               smoothScrolling: true,
               padding: { top: 16 },
               cursorBlinking: "smooth",
@@ -132,6 +124,7 @@ export const Editor = ({
                 verticalScrollbarSize: 10,
                 horizontalScrollbarSize: 10,
               },
+              readOnly,
             }}
           />
         </div>

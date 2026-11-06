@@ -9,13 +9,23 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const token = localStorage.getItem("token")
-    const savedUser = localStorage.getItem("user")
+    try {
+      const token = localStorage.getItem("token")
+      const savedUser = localStorage.getItem("user")
 
-    if (token && savedUser) {
-      const parsedUser = JSON.parse(savedUser)
-      setUser(parsedUser)
-      connectSocket(parsedUser.id, parsedUser.username)
+      if (token && savedUser) {
+        const parsedUser = JSON.parse(savedUser)
+        if (parsedUser?.id && parsedUser?.username) {
+          setUser(parsedUser)
+          connectSocket(parsedUser.id, parsedUser.username)
+        }
+      }
+    } catch {
+      try {
+        localStorage.removeItem("token")
+        localStorage.removeItem("user")
+      } catch {
+      }
     }
 
     setLoading(false)
@@ -39,6 +49,24 @@ export const AuthProvider = ({ children }) => {
     return data
   }
 
+  const guestLogin = async () => {
+    const data = await authApi.guest()
+    localStorage.setItem("token", data.token)
+    localStorage.setItem("user", JSON.stringify(data.user))
+    setUser(data.user)
+    connectSocket(data.user.id, data.user.username)
+    return data
+  }
+
+
+  const updateUser = (patch) => {
+    setUser((prev) => {
+      const next = { ...prev, ...patch }
+      localStorage.setItem("user", JSON.stringify(next))
+      return next
+    })
+  }
+
   const logout = async () => {
     try {
       await authApi.logout()
@@ -53,7 +81,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout, guestLogin, updateUser }}>
       {children}
     </AuthContext.Provider>
   )

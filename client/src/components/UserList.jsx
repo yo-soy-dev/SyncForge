@@ -1,211 +1,89 @@
-import { useState } from "react"
-
-import { Menu, X, Users } from "lucide-react"
-
+import { Users, Eye } from "lucide-react"
 import { useAuth } from "../context/AuthContext"
 
-export const UserList = ({ users = [] }) => {
+const AVATAR_STYLES = [
+  "bg-ember/15 border-ember/30 text-ember",
+  "bg-sync/15 border-sync/30 text-sync",
+  "bg-ai/15 border-ai/30 text-ai",
+  "bg-gold/15 border-gold/30 text-gold",
+]
+
+const avatarStyle = (name = "") => {
+  let sum = 0
+  for (const ch of name) sum += ch.charCodeAt(0)
+  return AVATAR_STYLES[sum % AVATAR_STYLES.length]
+}
+
+export const UserList = ({ users = [], followingId = null, onFollow }) => {
   const { user: currentUser } = useAuth()
 
-  const [isOpen, setIsOpen] = useState(false)
-
-  const currentUserEntry = currentUser
-    ? {
-      socketId: "me",
-      username: currentUser.username,
-      isMe: true,
-    }
-    : null
-
-  const otherUsers = users.filter(
-    (u) => u.username !== currentUser?.username
-  )
-
-  const allUsers = currentUserEntry
-    ? [currentUserEntry, ...otherUsers]
-    : otherUsers
+  const others = users.filter((u) => u.username !== currentUser?.username)
+  const everyone = currentUser
+    ? [{ socketId: "me", username: currentUser.username, avatarUrl: currentUser.avatarUrl, isMe: true }, ...others]
+    : others
 
   return (
-    <>
-      <button
-        onClick={() => setIsOpen(true)}
-        className="
-          md:hidden
-          absolute
-          top-3 left-3
-          z-30
-          w-10 h-10
-          rounded-xl
-          bg-gray-900/90
-          backdrop-blur
-          border border-gray-700
-          flex items-center justify-center
-          text-gray-300
-        "
-      >
-        <Menu size={18} />
-      </button>
+    <div className="p-3">
+      <p className="px-1 pb-3 font-mono text-[11px] uppercase tracking-wide text-muted">
+        {everyone.length} online
+      </p>
 
-      {isOpen && (
-        <div
-          onClick={() => setIsOpen(false)}
-          className="
-            fixed inset-0
-            bg-black/60
-            backdrop-blur-sm
-            z-40
-            md:hidden
-          "
-        />
-      )}
-
-      <aside
-        className={`
-          fixed md:relative
-          top-0 left-0
-          z-50 md:z-0
-          h-full
-          w-[280px]
-          bg-gray-900
-          border-r border-gray-800
-          flex flex-col
-          transition-transform duration-300
-          ${isOpen
-            ? "translate-x-0"
-            : "-translate-x-full md:translate-x-0"
-          }
-        `}
-      >
-
-        <div className="h-14 px-4 border-b border-gray-800 flex items-center justify-between shrink-0">
-
-          <div className="flex items-center gap-2">
-
-            <div className="w-8 h-8 rounded-lg bg-amber-400/10 border border-amber-400/20 flex items-center justify-center">
-              <Users size={16} className="text-amber-400" />
-            </div>
-
-            <div>
-              <h2 className="text-sm font-semibold text-white">
-                Participants
-              </h2>
-
-              <p className="text-xs text-gray-500">
-                {allUsers.length} online
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => setIsOpen(false)}
-            className="
-              md:hidden
-              w-8 h-8
-              rounded-lg
-              hover:bg-gray-800
-              flex items-center justify-center
-              text-gray-400
-            "
-          >
-            <X size={18} />
-          </button>
+      {everyone.length === 0 ? (
+        <div className="flex flex-col items-center py-10 text-center text-muted">
+          <Users size={28} />
+          <p className="mt-3 text-sm">No one is online</p>
         </div>
-
-        <ul className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
-
-          {allUsers.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-10 text-center text-gray-600">
-
-              <Users size={32} />
-
-              <p className="mt-3 text-sm">
-                No users online
-              </p>
-            </div>
-          )}
-
-          {allUsers.map((u, i) => (
+      ) : (
+        <ul className="flex flex-col gap-1.5">
+          {everyone.map((u, i) => (
             <li
               key={u.socketId || i}
-              className="
-                group
-                flex items-center gap-3
-                p-3
-                rounded-2xl
-                bg-gray-800/60 
-                backdrop-blur-xl
-                border border-gray-700
-                hover:border-amber-400/30
-                hover:-translate-y-0.5
-                hover:shadow-lg
-                transition-all
-              "
+              className="flex items-center gap-3 p-2.5 rounded-xl border border-line bg-ink"
             >
-
               <div className="relative shrink-0">
-
                 <div
-                  className="
-                    w-10 h-10
-                    rounded-xl
-                    bg-amber-400/10
-                    border border-amber-400/20
-                    flex items-center justify-center
-                    text-sm font-bold text-amber-400
-                  "
+                  className={`w-9 h-9 rounded-lg border overflow-hidden flex items-center justify-center text-sm font-bold ${avatarStyle(u.username)}`}
                 >
-                  {u.username?.charAt(0)?.toUpperCase()}
+                  {u.avatarUrl ? (
+                    <img src={u.avatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    u.username?.charAt(0)?.toUpperCase()
+                  )}
                 </div>
-
-                <span
-                  className="
-                    absolute
-                    bottom-0 right-0
-                    w-3 h-3
-                    rounded-full
-                    bg-emerald-400 animate-pulse
-                    border-2 border-gray-900
-                  "
-                />
+                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-sync border-2 border-ink" />
               </div>
 
               <div className="flex-1 min-w-0">
-
-                <div className="flex items-center gap-2">
-
-                  <p className="text-sm text-white truncate font-medium  max-w-[160px]">
+                <div className="flex items-center gap-2 min-w-0">
+                  <p className="text-sm font-medium text-fg truncate">
                     {u.username}
                   </p>
-
                   {u.isMe && (
-                    <span
-                      className="
-                        text-[10px]
-                        px-2 py-0.5
-                        rounded-full
-                        bg-amber-400/10
-                        text-amber-400
-                        border border-amber-400/20
-                      "
-                    >
+                    <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full border border-sync/30 bg-sync/10 text-sync">
                       You
                     </span>
                   )}
                 </div>
-
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Connected
-                </p>
+                <p className="text-xs text-muted mt-0.5">Connected</p>
               </div>
+
+              {!u.isMe && onFollow && (
+                <button
+                  onClick={() => onFollow(u.socketId)}
+                  aria-pressed={followingId === u.socketId}
+                  className={`shrink-0 h-8 px-2.5 inline-flex items-center gap-1.5 rounded-lg border text-[11px] font-medium transition-colors ${followingId === u.socketId
+                    ? "border-sync/40 bg-sync/10 text-sync"
+                    : "border-line text-muted hover:text-fg hover:border-muted"
+                    }`}
+                >
+                  <Eye size={13} />
+                  {followingId === u.socketId ? "Following" : "Follow"}
+                </button>
+              )}
             </li>
           ))}
         </ul>
-      </aside>
-    </>
+      )}
+    </div>
   )
 }
-
-
-
-
-

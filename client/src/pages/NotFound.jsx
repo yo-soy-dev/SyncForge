@@ -1,52 +1,58 @@
 import { useNavigate } from "react-router-dom"
-import { Home, ArrowLeft, AlertTriangle } from "lucide-react"
+import { motion, useReducedMotion } from "framer-motion"
+import { ArrowLeft, Home } from "lucide-react"
+import { useAuth } from "../context/AuthContext"
 
 export const NotFound = () => {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const reduce = useReducedMotion()
+  const drift = { repeat: Infinity, repeatType: "reverse", duration: 2.4, ease: "easeInOut" }
 
   return (
-    <div className="min-h-screen bg-gray-950 relative overflow-hidden flex items-center justify-center px-4 sm:px-6">
-
-      <div className="absolute top-[-100px] left-[-100px] w-[220px] sm:w-[300px] h-[220px] sm:h-[300px] bg-amber-400/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-[-100px] right-[-100px] w-[220px] sm:w-[300px] h-[220px] sm:h-[300px] bg-red-500/10 rounded-full blur-3xl" />
-
-      <div className="relative z-10 w-full max-w-lg text-center">
-
-        <div className="mx-auto mb-6 w-20 sm:w-24 h-20 sm:h-24 rounded-3xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-          <AlertTriangle size={36} className="text-red-400 sm:w-[40px] sm:h-[40px]" />
+    <div className="min-h-screen bg-ink flex items-center justify-center px-4">
+      <div className="w-full max-w-lg text-center">
+        {/* two cursors that never quite reach the page */}
+        <div className="relative inline-block px-8">
+          <motion.span
+            className="absolute top-2 bottom-2 left-0 w-[3px] rounded-full bg-ember"
+            animate={reduce ? undefined : { x: [0, 10] }}
+            transition={drift}
+          />
+          <h1 className="font-mono text-7xl sm:text-9xl font-bold tracking-tight text-fg select-none">
+            404
+          </h1>
+          <motion.span
+            className="absolute top-2 bottom-2 right-0 w-[3px] rounded-full bg-sync"
+            animate={reduce ? undefined : { x: [0, -10] }}
+            transition={drift}
+          />
         </div>
 
-        <h1 className="text-6xl sm:text-8xl font-black tracking-tight text-white">
-          4<span className="text-amber-400">0</span>4
-        </h1>
-
-        <h2 className="mt-4 sm:mt-5 text-xl sm:text-3xl font-bold text-white">
-          Page Not Found
+        <h2 className="mt-6 font-display text-2xl sm:text-3xl font-bold text-fg">
+          This page doesn't exist
         </h2>
-
-        <p className="mt-3 sm:mt-4 text-gray-500 text-sm sm:text-base leading-relaxed max-w-md mx-auto">
-          The page you’re looking for doesn’t exist or may have been moved.
+        <p className="mt-3 text-sm sm:text-base text-muted max-w-md mx-auto leading-relaxed">
+          The link may be wrong, or the page may have moved.
         </p>
 
-        <div className="mt-7 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
-
+        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium transition-all"
+            className="w-full sm:w-auto h-11 px-5 inline-flex items-center justify-center gap-2 rounded-lg border border-line text-fg text-sm font-medium hover:border-muted transition-colors"
           >
-            <ArrowLeft size={18} />
-            Go Back
+            <ArrowLeft size={16} />
+            Go back
           </button>
 
           <button
-            onClick={() => navigate("/")}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-gray-950 font-semibold transition-all"
+            onClick={() => navigate(user ? "/dashboard" : "/")}
+            className="w-full sm:w-auto h-11 px-5 inline-flex items-center justify-center gap-2 rounded-lg bg-ember text-ink text-sm font-semibold hover:brightness-110 transition"
           >
-            <Home size={18} />
-            Back to Home
+            <Home size={16} />
+            {user ? "Back to dashboard" : "Back to home"}
           </button>
         </div>
-
       </div>
     </div>
   )

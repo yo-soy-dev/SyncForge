@@ -7,7 +7,7 @@ RUN npm install
 
 COPY . .
 
-ARG VITE_API_URL=http://localhost:3000
+ARG VITE_API_URL=http://localhost:3001
 ARG VITE_SOCKET_URL=http://localhost:4003
 
 ENV VITE_API_URL=$VITE_API_URL
