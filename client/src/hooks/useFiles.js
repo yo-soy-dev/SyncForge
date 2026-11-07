@@ -7,6 +7,7 @@ export const useFiles = (roomId) => {
   const [saving, setSaving] = useState(false)
 
   const loadFiles = useCallback(async () => {
+    if (!roomId) return
     try {
       const data = await filesApi.getByRoom(roomId)
       setFiles(data.files || [])
@@ -27,18 +28,30 @@ export const useFiles = (roomId) => {
         }
         return [data.file, ...prev]
       })
-      toast.success(`${filename} saved!`)
     } catch (err) {
-      console.warn("Save failed (file service unavailable):", err.message)
-      toast.warning("File service coming soon — code editor mein kaam karta rahega!")
+      console.error("Cloud save error:", err)
+      throw err
     } finally {
       setSaving(false)
     }
   }, [roomId])
 
-  const loadFile = useCallback((file) => {
-    return file.content
+
+  const saveToDevice = useCallback((filename, content) => {
+    const blob = new Blob([content], { type: "text/plain" })
+    const url  = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href     = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }, [])
 
-  return { files, saving, loadFiles, saveFile, loadFile }
+  const loadFile = useCallback((file) => {
+    return file.content || ""
+  }, [])
+
+  return { files, saving, loadFiles, saveFile, saveToDevice, loadFile }
 }

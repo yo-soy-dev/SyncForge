@@ -13,6 +13,7 @@ import { useAuth } from "../context/AuthContext"
 import { RUNNABLE_LANGUAGES, LANGUAGE_COLORS } from "../utils/constants"
 // import logo from "../assets/logo.png"
 import { LogoMark } from "../components/LogoMark";
+import coduetPoster from "../assets/coduet.webp"
 
 /* ---------- tiny helpers ---------- */
 
@@ -102,12 +103,13 @@ export const Landing = () => {
             {/* <img src={logo} alt="" className="w-8 h-8 object-contain" /> */}
             <LogoMark />
             <span className="font-display text-[17px] font-bold tracking-tight">
-              Sync<span className="text-ember">Forge</span>
+              Co<span className="text-ember">duet</span>
             </span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-6 ml-6 text-sm text-muted">
             <a href="#features" className="hover:text-fg transition-colors">Features</a>
+            <a href="#showcase" className="hover:text-fg transition-colors">Showcase</a>
             <a href="#interviews" className="hover:text-fg transition-colors">Interviews</a>
             <a href="#how" className="hover:text-fg transition-colors">How it works</a>
           </nav>
@@ -189,9 +191,9 @@ export const Landing = () => {
               </a>
             </div>
 
-            <p className="mt-8 font-mono text-xs text-muted">
+            {/* <p className="mt-8 font-mono text-xs text-muted">
               Built with React · Yjs · Monaco · Socket.IO
-            </p>
+            </p> */}
           </div>
 
           {/* LIVE EDITOR MOCK */}
@@ -218,8 +220,8 @@ export const Landing = () => {
                     </div>
                   ))}
 
-                  <Cursor name="aarav" bg="bg-ember" top={[72, 72, 48, 72]} left={["23ch", "23ch", "27ch", "23ch"]} reduce={reduce} />
-                  <Cursor name="meera" bg="bg-sync" top={[120, 96, 120]} left={["24ch", "20ch", "24ch"]} reduce={reduce} />
+                  <Cursor name="devansh" bg="bg-ember" top={[72, 72, 48, 72]} left={["23ch", "23ch", "27ch", "23ch"]} reduce={reduce} />
+                  <Cursor name="aradhya" bg="bg-sync" top={[120, 96, 120]} left={["24ch", "20ch", "24ch"]} reduce={reduce} />
                 </div>
               </div>
             </div>
@@ -358,6 +360,36 @@ export const Landing = () => {
         </div>
       </section>
 
+
+      {/* CODUET POSTER */}
+      <section id="showcase" className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+
+        <div className="text-center mb-7 sm:mb-9">
+          <p className="font-mono text-xs text-ember tracking-wide">
+            CODUET IN ACTION
+          </p>
+
+          <h2 className="mt-3 font-display text-3xl sm:text-4xl font-bold">
+            See collaboration <span className="text-ember">come together.</span>
+          </h2>
+
+          <p className="mt-3 text-sm sm:text-base text-muted max-w-xl mx-auto leading-relaxed">
+            One workspace. Multiple perspectives. A better way to build and interview.
+          </p>
+        </div>
+
+
+        <div className="relative overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_25px_70px_-35px_rgba(255,106,61,0.3)]">
+          <img
+            src={coduetPoster}
+            alt="Coduet — Two minds, one codebase"
+            className="block w-full h-auto object-contain"
+            loading="lazy"
+          />
+        </div>
+      </section>
+
+
       {/* HOW IT WORKS */}
       <section id="how" className="border-y border-line bg-surface/50 scroll-mt-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
@@ -386,7 +418,7 @@ export const Landing = () => {
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
         <div className="rounded-2xl border border-line bg-surface px-6 py-12 sm:py-16 text-center">
           <h2 className="font-display text-3xl sm:text-4xl font-bold">
-            Ready to <span className="text-ember">forge</span> something?
+            Ready to <span className="text-ember">duet</span> something?
           </h2>
           <p className="mt-3 text-muted max-w-md mx-auto">
             Create your first room in seconds.

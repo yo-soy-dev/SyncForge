@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
+// import coduetPoster from "../assets/coduet.webp"
 import { Plus, Search, ArrowRight, Hash, Code2, Users, Mic } from "lucide-react"
 import { toast } from "sonner"
 
@@ -184,6 +185,15 @@ export const Home = () => {
           </button>
         </header>
 
+        {/* <section className="mt-7 overflow-hidden rounded-2xl border border-line bg-surface">
+          <img
+            src={coduetPoster}
+            alt="Coduet — Two Minds. One Codebase."
+            className="block w-full h-auto"
+            loading="eager"
+          />
+        </section> */}
+
         {error && (
           <div className="mt-6 p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 text-sm">
             {error}
@@ -269,8 +279,8 @@ export const Home = () => {
                   aria-selected={filter === f.id}
                   onClick={() => setFilter(f.id)}
                   className={`flex-1 sm:flex-none px-3 h-9 rounded-md text-xs font-medium transition-colors ${filter === f.id
-                      ? "bg-ink text-fg"
-                      : "text-muted hover:text-fg"
+                    ? "bg-ink text-fg"
+                    : "text-muted hover:text-fg"
                     }`}
                 >
                   {f.label}
@@ -351,8 +361,8 @@ export const Home = () => {
                   type="button"
                   onClick={() => setNewRoom((p) => ({ ...p, language: lang }))}
                   className={`flex items-center gap-2 px-2.5 h-10 rounded-lg border font-mono text-xs capitalize transition-colors ${newRoom.language === lang
-                      ? "border-ember bg-ember/10 text-fg"
-                      : "border-line text-muted hover:border-muted"
+                    ? "border-ember bg-ember/10 text-fg"
+                    : "border-line text-muted hover:border-muted"
                     }`}
                 >
                   <span
@@ -372,8 +382,8 @@ export const Home = () => {
                 type="button"
                 onClick={() => setNewRoom((p) => ({ ...p, type: "collab" }))}
                 className={`text-left p-3 rounded-lg border transition-colors ${newRoom.type === "collab"
-                    ? "border-sync bg-sync/10"
-                    : "border-line hover:border-muted"
+                  ? "border-sync bg-sync/10"
+                  : "border-line hover:border-muted"
                   }`}
               >
                 <Users size={16} className="text-sync mb-2" />
@@ -385,8 +395,8 @@ export const Home = () => {
                 type="button"
                 onClick={() => setNewRoom((p) => ({ ...p, type: "interview" }))}
                 className={`text-left p-3 rounded-lg border transition-colors ${newRoom.type === "interview"
-                    ? "border-ai bg-ai/10"
-                    : "border-line hover:border-muted"
+                  ? "border-ai bg-ai/10"
+                  : "border-line hover:border-muted"
                   }`}
               >
                 <Mic size={16} className="text-ai mb-2" />

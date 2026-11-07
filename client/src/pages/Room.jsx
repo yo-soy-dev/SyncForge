@@ -129,7 +129,7 @@ export const Room = () => {
   const [currentFile, setCurrentFile] = useState("main")
 
   const { output, running, run, clear } = useTerminal(room?.language || "javascript")
-  const { files, saving, loadFiles, saveFile, loadFile } = useFiles(roomId)
+  const { files, saving, loadFiles, saveFile, saveToDevice, loadFile } = useFiles(roomId)
   const { users } = useEditor(roomId)
   const call = useCall({ roomId })
   const connection = useConnection()
@@ -307,7 +307,13 @@ export const Room = () => {
   const handleSaveConfirm = async (filename) => {
     setSaveOpen(false)
     setCurrentFile(filename)
-    await saveFile(filename, currentCode, room?.language)
+    saveToDevice(filename, currentCode)
+    try {
+      await saveFile(filename, currentCode, room?.language)
+      toast.success(`${filename} saved to device and cloud`)
+    } catch (err) {
+      toast.warning(err.response?.data?.message || `${filename} downloaded, but cloud save failed`)
+    }
   }
 
   const handleLoadFile = useCallback((file) => {
